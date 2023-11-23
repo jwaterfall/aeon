@@ -14,10 +14,6 @@ config/name="Craft"
 run/main_scene="res://chunk.tscn"
 config/features=PackedStringArray("4.1", "C#", "Forward Plus")
 
-[autoload]
-
-Global="*res://global.tscn"
-
 [dotnet]
 
 project/assembly_name="Craft"

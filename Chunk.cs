@@ -1,6 +1,7 @@
 using Godot;
 using System;
 
+[Tool]
 public partial class Chunk : StaticBody3D
 {
 	private readonly Vector3[] vertices = new Vector3[]
@@ -34,8 +35,6 @@ public partial class Chunk : StaticBody3D
 	}
 
 	public void Update() {
-		var global = GetNode<Global>("/root/Global");
-
 		// Unload
 		if (meshInstance != null) {
 			meshInstance.CallDeferred("queue_free");
@@ -46,11 +45,11 @@ public partial class Chunk : StaticBody3D
 		meshInstance = new MeshInstance3D();
 		surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
 
-		for(int x = 0; x < global.CHUNK_DIMENSION.X; x++)
+		for(int x = 0; x < Global.CHUNK_DIMENSION.X; x++)
 		{
-			for(int y = 0; y < global.CHUNK_DIMENSION.Y; y++)
+			for(int y = 0; y < Global.CHUNK_DIMENSION.Y; y++)
 			{
-				for(int z = 0; z < global.CHUNK_DIMENSION.Z; z++)
+				for(int z = 0; z < Global.CHUNK_DIMENSION.Z; z++)
 				{
 					CreateBlock(new Vector3(x, y, z));
 				}
