@@ -60,10 +60,9 @@ public partial class Player : CharacterBody3D
 		if (!IsOnFloor())
 		{
             NewVelocity.Y -= Configuration.GRAVITY * (float)delta;
-		}
-
-		if (Input.IsActionJustPressed("Jump"))
-		{
+		} 
+		else if (Input.IsActionJustPressed("Jump"))
+        {
             NewVelocity.Y = Configuration.JUMP_VELOCITY;
         }
 
