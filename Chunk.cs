@@ -30,9 +30,10 @@ public partial class Chunk : StaticBody3D
 	private SurfaceTool surfaceTool = new SurfaceTool();
 	private ArrayMesh mesh;
 	private MeshInstance3D meshInstance;
-	private StandardMaterial3D material = GD.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
+	private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
+	public Vector2 ChunkPosition;
 
-	List<List<List<BlockType>>> blockTypes = new();
+    List<List<List<BlockType>>> blockTypes = new();
 
     public override void _Ready()
 	{
@@ -69,8 +70,6 @@ public partial class Chunk : StaticBody3D
                 }
             }
         }
-
-
     }
 
 	public void Update()
@@ -103,6 +102,8 @@ public partial class Chunk : StaticBody3D
 
 		AddChild(meshInstance);
 		meshInstance.CreateTrimeshCollision();
+
+		Visible = true;
 	}
 
     /// <summary>
@@ -175,5 +176,13 @@ public partial class Chunk : StaticBody3D
 
         surfaceTool.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
 		surfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+	}
+
+	public void SetChunkPosition(Vector2 newChunkPosition)
+	{
+		ChunkPosition = newChunkPosition;
+		Position = (new Vector3(newChunkPosition.X, 0, newChunkPosition.Y)) * Configuration.CHUNK_DIMENSION;
+
+		Visible = false;
 	}
 }

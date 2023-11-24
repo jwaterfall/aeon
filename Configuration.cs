@@ -9,4 +9,5 @@ public partial class Configuration : Node
 	public static readonly float MOVEMENT_SPEED = 10;
 	public static readonly float GRAVITY = 20;
 	public static readonly float JUMP_VELOCITY = 10;
+	public static readonly float CHUNK_LOAD_RADIUS = 5;
 }
