@@ -1,6 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://ck50xfncva8j"]
+[gd_scene load_steps=3 format=3 uid="uid://ck50xfncva8j"]
 
 [ext_resource type="Script" path="res://Chunk.cs" id="1_b63pa"]
+[ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://player.tscn" id="2_4kpft"]
 
 [node name="Chunk" type="StaticBody3D"]
 script = ExtResource("1_b63pa")
+
+[node name="Player" parent="." instance=ExtResource("2_4kpft")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 18, 8)
