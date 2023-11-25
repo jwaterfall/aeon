@@ -55,26 +55,31 @@ public partial class ChunkManager : Node3D
 
     public IEnumerable<Vector2I> GetNearbyChunkPositions(Vector3 playerPosition)
     {
-        var loadRadius = Configuration.CHUNK_LOAD_RADIUS;
+        var radius = Configuration.CHUNK_LOAD_RADIUS;
         var playerChunkPosition = (Vector3I)(playerPosition / Configuration.CHUNK_DIMENSION).Round();
 
-        int x = 0; int y = 0;
-        int dx = 0; int dy = -1;
-        for (int i = 0; i < loadRadius * loadRadius; i++)
+        int x = 0, z = 0;
+        int dx = 0, dz = -1;
+
+        for (int i = 0; i < Math.Pow((2 * radius + 1), 2); i++)
         {
-            if (-loadRadius / 2 < x && x < loadRadius / 2 && -loadRadius / 2 < y && y < loadRadius / 2)
+            // Check if the absolute values of x and z are both less than or equal to the current radius
+            if (-radius <= x && x <= radius && -radius <= z && z <= radius)
             {
-                yield return new Vector2I(x + playerChunkPosition.X, y + playerChunkPosition.Z);
+                yield return new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Z);
             }
-            if (x == y || (x < 0 && x == -y) || (x > 0 && x == 1 - y))
+
+            // If at a corner, change direction
+            if (x == z || (x < 0 && x == -z) || (x > 0 && x == 1 - z))
             {
-                int dc = dx;
-                dx = -dy;
-                dy = dc;
+                int temp = dx;
+                dx = -dz;
+                dz = temp;
             }
+
+            // Move to the next position in the spiral
             x += dx;
-            y += dy;
+            z += dz;
         }
-        //Source: https://stackoverflow.com/a/398302
     }
 }
