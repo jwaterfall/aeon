@@ -4,7 +4,8 @@
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_ialqf"]
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_xhstp"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_h2tct"]
+size = Vector3(0.75, 1.75, 0.75)
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_1wb6x")
@@ -13,7 +14,8 @@ script = ExtResource("1_1wb6x")
 mesh = SubResource("CylinderMesh_ialqf")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-shape = SubResource("CylinderShape3D_xhstp")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.125, 0)
+shape = SubResource("BoxShape3D_h2tct")
 
 [node name="Head" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
