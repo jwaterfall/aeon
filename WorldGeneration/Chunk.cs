@@ -32,7 +32,7 @@ public partial class Chunk : StaticBody3D
     private ConcavePolygonShape3D collisionShape;
     private CollisionShape3D collisionShapeNode;
     private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
-	public Vector2I ChunkPosition;
+	public Vector3I ChunkPosition;
     private double timeSinceVisit = 0;
     public bool generated = false;
     private FastNoiseLite noise = new();
@@ -74,21 +74,21 @@ public partial class Chunk : StaticBody3D
                 blockTypes[x].Add(new List<BlockType>());
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var globalPosition = ChunkPosition * new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z) + new Vector2I(x, z);
+                    var globalPosition = ChunkPosition * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
-                    var height = Mathf.Round(((noise.GetNoise2Dv(globalPosition) + 1)/2)*64);
+                    var height = Mathf.Round(((noise.GetNoise2Dv(new Vector2I(globalPosition.X, globalPosition.Z)) + 1)/2)*64);
 
                     BlockType blockType = BlockTypes.Air;
 
-					if (y < height - 2)
+					if (globalPosition.Y < height - 2)
 					{
 						blockType = BlockTypes.Stone;
 					}
-					else if (y < height)
+					else if (globalPosition.Y < height)
 					{
 						blockType = BlockTypes.Dirt;
                     }
-                    else if(y == height)
+                    else if(globalPosition.Y == height)
                     {
                         blockType = BlockTypes.Grass;
                     }
@@ -200,9 +200,9 @@ public partial class Chunk : StaticBody3D
 		surfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
 	}
 
-	public void SetChunkPosition(Vector2I newChunkPosition)
+	public void SetChunkPosition(Vector3I newChunkPosition)
 	{
 		ChunkPosition = newChunkPosition;
-		Position = (new Vector3(newChunkPosition.X, 0, newChunkPosition.Y)) * Configuration.CHUNK_DIMENSION;
+		Position = newChunkPosition * Configuration.CHUNK_DIMENSION;
 	}
 }

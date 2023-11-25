@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 public partial class ChunkManager : Node3D
 {
     private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/Chunk.tscn") as PackedScene;
-    static readonly Dictionary<Vector2I, Chunk> chunks = new();
+    static readonly Dictionary<Vector3I, Chunk> chunks = new();
     static readonly Queue<Chunk> generateQueue = new();
 
     public void Update(Vector3 playerPosition)
@@ -53,7 +53,7 @@ public partial class ChunkManager : Node3D
         }
     }
 
-    public IEnumerable<Vector2I> GetNearbyChunkPositions(Vector3 playerPosition)
+    public IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3 playerPosition)
     {
         var radius = Configuration.CHUNK_LOAD_RADIUS;
         var playerChunkPosition = (Vector3I)(playerPosition / Configuration.CHUNK_DIMENSION).Round();
@@ -63,10 +63,15 @@ public partial class ChunkManager : Node3D
 
         for (int i = 0; i < Math.Pow((2 * radius + 1), 2); i++)
         {
-            // Check if the absolute values of x and z are both less than or equal to the current radius
-            if (-radius <= x && x <= radius && -radius <= z && z <= radius)
+            for (int y = -radius; y <= radius; y++)
             {
-                yield return new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Z);
+                // Check if the absolute values of x, y, and z are all less than or equal to the respective radii
+                if (-radius <= x && x <= radius &&
+                    -radius <= y && y <= radius &&
+                    -radius <= z && z <= radius)
+                {
+                    yield return new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
+                }
             }
 
             // If at a corner, change direction
