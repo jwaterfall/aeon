@@ -27,20 +27,26 @@ public partial class Chunk : StaticBody3D
 	};
 
 	private SurfaceTool surfaceTool = new SurfaceTool();
-	private ArrayMesh mesh;
+	private Mesh mesh;
 	private MeshInstance3D meshInstance;
-	private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
+    private ConcavePolygonShape3D collisionShape;
+    private CollisionShape3D collisionShapeNode;
+    private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
 	public Vector2I ChunkPosition;
 
     List<List<List<BlockType>>> blockTypes = new();
 
     public override void _Ready()
-	{
-		Generate();
-		Update();
-	}
+    {
+        collisionShapeNode = new();
+        AddChild(collisionShapeNode);
 
-	public void Generate()
+        meshInstance = new();
+        meshInstance.MaterialOverride = material;
+        AddChild(meshInstance);
+    }
+
+    public void Generate()
 	{
         for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
         {
@@ -73,14 +79,6 @@ public partial class Chunk : StaticBody3D
 
 	public void Update()
 	{
-		// Unload
-		if (meshInstance != null) {
-			meshInstance.CallDeferred("queue_free");
-			meshInstance = null;
-		}
-
-		mesh = new ArrayMesh();
-		meshInstance = new MeshInstance3D();
 		surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
 
 		for(int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
@@ -95,15 +93,18 @@ public partial class Chunk : StaticBody3D
 		}
 
 		surfaceTool.GenerateNormals(false);
-		surfaceTool.SetMaterial(material);
-		surfaceTool.Commit(mesh);
-		meshInstance.Mesh = mesh;
+        mesh = surfaceTool.Commit();
+        collisionShape = mesh.CreateTrimeshShape();
 
-		AddChild(meshInstance);
-		meshInstance.CreateTrimeshCollision();
+        CallThreadSafe("AfterUpdate");
+    }
+    public void AfterUpdate()
+    {
+        meshInstance.Mesh = mesh;
+        collisionShapeNode.Shape = collisionShape;
 
-		Visible = true;
-	}
+        Visible = true;
+    }
 
     /// <summary>
     /// <c>Returns</c> true if the given block is transparent or outside of the chunk

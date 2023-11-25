@@ -1,11 +1,13 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 public partial class ChunkManager : Node3D
 {
     private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/Chunk.tscn") as PackedScene;
     static readonly Dictionary<Vector2I, Chunk> chunks = new();
+    static readonly Queue<Chunk> generateQueue = new();
 
     public void Update(Vector3 playerPosition)
     {
@@ -17,6 +19,26 @@ public partial class ChunkManager : Node3D
                 chunk.SetChunkPosition(chunkPosition);
                 AddChild(chunk);
                 chunks.Add(chunkPosition, chunk);
+                generateQueue.Enqueue(chunk);
+            }
+        }
+
+        GenerateNextChunk();
+    }
+
+    private static Task[] generationTasks = new Task[6];
+    public static void GenerateNextChunk()
+    {
+        for (int i = 0; i < generationTasks.Length; i++)
+        {
+            Task task = generationTasks[i];
+            if (generateQueue.Count > 0 && (task == null || task.IsCompleted))
+            {
+                Chunk chunk = generateQueue.Dequeue();
+                generationTasks[i] = Task.Run(() => {
+                    chunk.Generate();
+                    chunk.Update();
+                });
             }
         }
     }
