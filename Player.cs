@@ -7,8 +7,14 @@ public partial class Player : CharacterBody3D
 	private float CameraXRotation = 0;
 
 	public override void _Ready()
-	{
-		Input.MouseMode = Input.MouseModeEnum.Captured;
+    {
+        if (Configuration.FLYING_ENABLED)
+        {
+            CollisionShape3D collisionShape = GetNode<CollisionShape3D>("CollisionShape3D");
+            collisionShape.Disabled = true;
+        }
+
+        Input.MouseMode = Input.MouseModeEnum.Captured;
 	}
 
 	public override void _Input(InputEvent @event)
@@ -57,13 +63,38 @@ public partial class Player : CharacterBody3D
 			return;
 		}
 
-		if (!IsOnFloor())
-		{
-            NewVelocity.Y -= Configuration.GRAVITY * (float)delta;
-		} 
-		else if (Input.IsActionJustPressed("Jump"))
+		if (Configuration.FLYING_ENABLED)
         {
-            NewVelocity.Y = Configuration.JUMP_VELOCITY;
+            Vector3 verticalDirection = Vector3.Zero;
+
+            if (Input.IsActionPressed("FlyDown") && !IsOnFloor())
+            {
+                verticalDirection = Vector3.Down;
+            }
+            if (Input.IsActionPressed("Jump") && !IsOnCeiling())
+            {
+                verticalDirection = Vector3.Up;
+            }
+
+            if (verticalDirection.Length() != 0)
+            {
+                NewVelocity.Y = verticalDirection.Y * Configuration.MOVEMENT_SPEED;
+            }
+            else
+            {
+                NewVelocity.Y = Mathf.MoveToward(Velocity.Y, 0, Configuration.MOVEMENT_SPEED);
+            }
+        }
+		else
+		{
+            if (!IsOnFloor())
+            {
+                NewVelocity.Y -= Configuration.GRAVITY * (float)delta;
+            }
+            else if (Input.IsActionJustPressed("Jump"))
+            {
+                NewVelocity.Y = Configuration.JUMP_VELOCITY;
+            }
         }
 
         Basis Basis = Head.GlobalTransform.Basis;
