@@ -109,7 +109,7 @@ public partial class Chunk : StaticBody3D
 			{
 				for(int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
 				{
-					CreateBlock(new Vector3(x, y, z));
+					CreateBlock(new Vector3I(x, y, z));
 				}
 			}
 		}
@@ -146,9 +146,9 @@ public partial class Chunk : StaticBody3D
 		return true;
     }
 
-	private void CreateBlock(Vector3 localPosition)
+	private void CreateBlock(Vector3I localPosition)
 	{
-		BlockType blockType = blockTypes[(int)localPosition.X][(int)localPosition.Y][(int)localPosition.Z];
+		BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
 
 		if (blockType == BlockTypes.Air) {
 			return;
@@ -180,7 +180,7 @@ public partial class Chunk : StaticBody3D
         }
 	}
 
-	private void CreateFace(int[] face, Vector3 localPosition, Vector2 textureAtlasOffset)
+	private void CreateFace(int[] face, Vector3I localPosition, Vector2I textureAtlasOffset)
 	{
 		Vector3 a = vertices[face[0]] + localPosition;
 		Vector3 b = vertices[face[1]] + localPosition;
