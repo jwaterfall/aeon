@@ -5,12 +5,12 @@ public class BlockType
 {
     public string Name;
 	public bool Solid = true;
-    public Vector2I TextureAtlasOffsetTop = Vector2I.Zero;
-	public Vector2I TextureAtlasOffsetBottom = Vector2I.Zero;
-    public Vector2I TextureAtlasOffsetLeft = Vector2I.Zero;
-	public Vector2I TextureAtlasOffsetRight = Vector2I.Zero;
-    public Vector2I TextureAtlasOffsetFront = Vector2I.Zero;
-    public Vector2I TextureAtlasOffsetBack = Vector2I.Zero;
+    public Vector2 TextureAtlasOffsetTop = Vector2.Zero;
+	public Vector2 TextureAtlasOffsetBottom = Vector2.Zero;
+    public Vector2 TextureAtlasOffsetLeft = Vector2.Zero;
+	public Vector2 TextureAtlasOffsetRight = Vector2.Zero;
+    public Vector2 TextureAtlasOffsetFront = Vector2.Zero;
+    public Vector2 TextureAtlasOffsetBack = Vector2.Zero;
 }
 
 public static class BlockTypes

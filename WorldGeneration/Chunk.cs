@@ -180,7 +180,7 @@ public partial class Chunk : StaticBody3D
         }
 	}
 
-	private void CreateFace(int[] face, Vector3I localPosition, Vector2I textureAtlasOffset)
+	private void CreateFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset)
 	{
 		Vector3 a = vertices[face[0]] + localPosition;
 		Vector3 b = vertices[face[1]] + localPosition;
