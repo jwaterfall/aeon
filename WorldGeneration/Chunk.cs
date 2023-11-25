@@ -30,7 +30,7 @@ public partial class Chunk : StaticBody3D
 	private ArrayMesh mesh;
 	private MeshInstance3D meshInstance;
 	private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
-	public Vector2 ChunkPosition;
+	public Vector2I ChunkPosition;
 
     List<List<List<BlockType>>> blockTypes = new();
 
@@ -177,11 +177,11 @@ public partial class Chunk : StaticBody3D
 		surfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
 	}
 
-	public void SetChunkPosition(Vector2 newChunkPosition)
+	public void SetChunkPosition(Vector2I newChunkPosition)
 	{
 		ChunkPosition = newChunkPosition;
 		Position = (new Vector3(newChunkPosition.X, 0, newChunkPosition.Y)) * Configuration.CHUNK_DIMENSION;
 
-		Visible = false;
+        Visible = false;
 	}
 }
