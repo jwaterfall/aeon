@@ -33,6 +33,8 @@ public partial class Chunk : StaticBody3D
     private CollisionShape3D collisionShapeNode;
     private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
 	public Vector2I ChunkPosition;
+    private double timeSinceVisit = 0;
+    public bool generated = false;
 
     List<List<List<BlockType>>> blockTypes = new();
 
@@ -44,6 +46,21 @@ public partial class Chunk : StaticBody3D
         meshInstance = new();
         meshInstance.MaterialOverride = material;
         AddChild(meshInstance);
+    }
+
+    public override void _Process(double delta)
+    {
+        timeSinceVisit += delta;
+
+        if (timeSinceVisit > Configuration.CHUNK_UNLOAD_TIME && generated)
+        {
+            QueueFree();
+            ChunkManager.removeChunk(this);
+        }
+    }
+    public void Visit()
+    {
+        timeSinceVisit = 0;
     }
 
     public void Generate()
@@ -103,7 +120,7 @@ public partial class Chunk : StaticBody3D
         meshInstance.Mesh = mesh;
         collisionShapeNode.Shape = collisionShape;
 
-        Visible = true;
+        generated = true;
     }
 
     /// <summary>
@@ -182,7 +199,5 @@ public partial class Chunk : StaticBody3D
 	{
 		ChunkPosition = newChunkPosition;
 		Position = (new Vector3(newChunkPosition.X, 0, newChunkPosition.Y)) * Configuration.CHUNK_DIMENSION;
-
-        Visible = false;
 	}
 }

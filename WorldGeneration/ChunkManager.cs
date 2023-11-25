@@ -21,9 +21,19 @@ public partial class ChunkManager : Node3D
                 chunks.Add(chunkPosition, chunk);
                 generateQueue.Enqueue(chunk);
             }
+            else
+            {
+                Chunk chunk = chunks[chunkPosition];
+                chunk.Visit();
+            }
         }
 
         GenerateNextChunk();
+    }
+
+    public static void removeChunk(Chunk chunk)
+    {
+        chunks.Remove(chunk.ChunkPosition);
     }
 
     private static Task[] generationTasks = new Task[6];

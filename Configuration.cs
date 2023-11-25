@@ -10,4 +10,5 @@ public partial class Configuration : Node
 	public static readonly float GRAVITY = 20;
 	public static readonly float JUMP_VELOCITY = 10;
 	public static readonly float CHUNK_LOAD_RADIUS = 5;
+	public static readonly float CHUNK_UNLOAD_TIME = 10;
 }
