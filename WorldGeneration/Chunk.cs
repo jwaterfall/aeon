@@ -76,11 +76,17 @@ public partial class Chunk : StaticBody3D
                 {
                     var globalPosition = ChunkPosition * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
-                    var height = Mathf.Round(((noise.GetNoise2Dv(new Vector2I(globalPosition.X, globalPosition.Z)) + 1)/2)*64);
+                    int minHeight = -16;
+                    int waterLevel = 0;
+                    var height = minHeight + Mathf.Round(((noise.GetNoise2Dv(new Vector2I(globalPosition.X, globalPosition.Z)) + 1)/2)* 32);
 
                     BlockType blockType = BlockTypes.Air;
 
-					if (globalPosition.Y < height - 2)
+                    if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
+                    {
+                        blockType = BlockTypes.Water;
+                    }
+                    else if(globalPosition.Y < height - 2)
 					{
 						blockType = BlockTypes.Stone;
 					}
@@ -101,9 +107,10 @@ public partial class Chunk : StaticBody3D
 
 	public void Update()
 	{
-		surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+        surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+        surfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
-		for(int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+        for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
 		{
 			for(int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
 			{

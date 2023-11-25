@@ -49,4 +49,15 @@ public static class BlockTypes
         TextureAtlasOffsetFront = new(3, 0),
         TextureAtlasOffsetBack = new(3, 0),
     };
+
+    public static readonly BlockType Water = new BlockType
+    {
+        Solid = false,
+        TextureAtlasOffsetTop = new(1, 1),
+        TextureAtlasOffsetBottom = new(1, 1),
+        TextureAtlasOffsetLeft = new(1, 1),
+        TextureAtlasOffsetRight = new(1, 1),
+        TextureAtlasOffsetFront = new(1, 1),
+        TextureAtlasOffsetBack = new(1, 1),
+    };
 }
