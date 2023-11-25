@@ -2,7 +2,6 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-[Tool]
 public partial class Chunk : StaticBody3D
 {
     private static class Faces

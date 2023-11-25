@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://bt8r1sncvbh6k"]
+[gd_scene load_steps=4 format=3 uid="uid://bt8r1sncvbh6k"]
 
 [ext_resource type="Script" path="res://World.cs" id="1_4ocwg"]
 [ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://player.tscn" id="2_eji6k"]
+[ext_resource type="Script" path="res://WorldGeneration/ChunkManager.cs" id="3_a5p3c"]
 
 [node name="World" type="Node3D"]
 script = ExtResource("1_4ocwg")
@@ -9,4 +10,5 @@ script = ExtResource("1_4ocwg")
 [node name="Player" parent="." instance=ExtResource("2_eji6k")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 32, 8)
 
-[node name="Chunks" type="Node3D" parent="."]
+[node name="ChunkManager" type="Node3D" parent="."]
+script = ExtResource("3_a5p3c")
