@@ -76,9 +76,15 @@ public partial class Chunk : StaticBody3D
                 {
                     var globalPosition = ChunkPosition * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
-                    int minHeight = -16;
+                    // Use different noise functions for various aspects of terrain generation
+                    float continentalnessScale = 0.1f; // Adjust this scale factor as needed
+                    float continentalness = noise.GetNoise2Dv(new Vector2(globalPosition.X * continentalnessScale, globalPosition.Z * continentalnessScale));
+
+                    // Map continentalness to the desired height range
+                    int height = MapContinentalnessToHeight(continentalness);
+
+                    // Adjust parameters based on noise values
                     int waterLevel = 0;
-                    var height = minHeight + Mathf.Round(((noise.GetNoise2Dv(new Vector2I(globalPosition.X, globalPosition.Z)) + 1)/2)* 32);
 
                     BlockType blockType = BlockTypes.Air;
 
@@ -105,7 +111,44 @@ public partial class Chunk : StaticBody3D
         }
     }
 
-	public void Update()
+    // Custom non-linear mapping function based on the provided values
+    private int MapContinentalnessToHeight(float continentalness)
+    {
+        // Use the provided non-linear mapping values with smoothstep
+        float t;
+
+        if (continentalness <= -0.6f)
+        {
+            return -32;
+        }
+        else if (continentalness <= -0.4f)
+        {
+            t = Mathf.SmoothStep(-0.6f, -0.4f, continentalness);
+            return (int)Mathf.Round(Mathf.Lerp(-32, 8, t));
+        }
+        else if (continentalness <= -0.25f)
+        {
+            t = Mathf.SmoothStep(-0.4f, -0.25f, continentalness);
+            return (int)Mathf.Round(Mathf.Lerp(8, 16, t));
+        }
+        else if (continentalness <= -0.2f)
+        {
+            t = Mathf.SmoothStep(-0.25f, -0.2f, continentalness);
+            return (int)Mathf.Round(Mathf.Lerp(16, 64, t));
+        }
+        else if (continentalness <= 0)
+        {
+            t = Mathf.SmoothStep(-0.2f, 0, continentalness);
+            return (int)Mathf.Round(Mathf.Lerp(64, 70, t));
+        }
+        else
+        {
+            t = Mathf.SmoothStep(0, 1, continentalness);
+            return (int)Mathf.Round(Mathf.Lerp(70, 96, t));
+        }
+    }
+
+    public void Update()
 	{
         surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
         surfaceTool.SetSmoothGroup(UInt32.MaxValue);

@@ -3,7 +3,7 @@ using System;
 
 public partial class Configuration : Node
 {
-	public static readonly Vector3I CHUNK_DIMENSION = new(32, 32, 32);
+	public static readonly Vector3I CHUNK_DIMENSION = new(16, 16, 16);
 	public static readonly Vector2I TEXTURE_ATLAS_SIZE = new(8, 2);
 	public static readonly float MOUSE_SENSITIVITY = 0.3f;
 	public static readonly float MOVEMENT_SPEED = 5;
