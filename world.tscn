@@ -8,7 +8,7 @@
 script = ExtResource("1_4ocwg")
 
 [node name="Player" parent="." instance=ExtResource("2_eji6k")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 32, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 64, 8)
 
 [node name="ChunkManager" type="Node3D" parent="."]
 script = ExtResource("3_a5p3c")

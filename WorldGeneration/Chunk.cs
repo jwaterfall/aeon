@@ -35,6 +35,7 @@ public partial class Chunk : StaticBody3D
 	public Vector2I ChunkPosition;
     private double timeSinceVisit = 0;
     public bool generated = false;
+    private FastNoiseLite noise = new();
 
     List<List<List<BlockType>>> blockTypes = new();
 
@@ -73,17 +74,21 @@ public partial class Chunk : StaticBody3D
                 blockTypes[x].Add(new List<BlockType>());
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-					BlockType blockType = BlockTypes.Air;
+                    var globalPosition = ChunkPosition * new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z) + new Vector2I(x, z);
 
-					if (y < 14)
+                    var height = Mathf.Round(((noise.GetNoise2Dv(globalPosition) + 1)/2)*64);
+
+                    BlockType blockType = BlockTypes.Air;
+
+					if (y < height - 2)
 					{
 						blockType = BlockTypes.Stone;
 					}
-					else if (y < 16)
+					else if (y < height)
 					{
 						blockType = BlockTypes.Dirt;
                     }
-                    else if(y == 16)
+                    else if(y == height)
                     {
                         blockType = BlockTypes.Grass;
                     }
