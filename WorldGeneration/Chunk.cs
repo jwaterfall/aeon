@@ -80,8 +80,12 @@ public partial class Chunk : StaticBody3D
                     float continentalnessScale = 0.1f; // Adjust this scale factor as needed
                     float continentalness = noise.GetNoise2Dv(new Vector2(globalPosition.X * continentalnessScale, globalPosition.Z * continentalnessScale));
 
+                    // Use different noise functions for various aspects of terrain generation
+                    float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
+                    float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
+
                     // Map continentalness to the desired height range
-                    int height = MapContinentalnessToHeight(continentalness);
+                    int height = MapContinentalnessToHeight(continentalness) + MapPeaksAndValleysToHeight(peaksAndValleys);
 
                     // Adjust parameters based on noise values
                     int waterLevel = 0;
@@ -145,6 +149,38 @@ public partial class Chunk : StaticBody3D
         {
             t = Mathf.SmoothStep(0, 1, continentalness);
             return (int)Mathf.Round(Mathf.Lerp(70, 96, t));
+        }
+    }
+
+    private int MapPeaksAndValleysToHeight(float peaksAndValleys)
+    {
+        // Use the provided non-linear mapping values with smoothstep
+        float t;
+
+        if (peaksAndValleys <= -0.8f)
+        {
+            t = Mathf.SmoothStep(0, -0.8f, peaksAndValleys);
+            return (int)Mathf.Round(Mathf.Lerp(-16, -10, t));
+        }
+        else if (peaksAndValleys <= -0.4f)
+        {
+            t = Mathf.SmoothStep(-0.8f, -0.4f, peaksAndValleys);
+            return (int)Mathf.Round(Mathf.Lerp(-10, 0, t));
+        }
+        else if (peaksAndValleys <= 0)
+        {
+            t = Mathf.SmoothStep(-0.4f, -0f, peaksAndValleys);
+            return (int)Mathf.Round(Mathf.Lerp(0, 8, t));
+        }
+        else if (peaksAndValleys <= 0.4)
+        {
+            t = Mathf.SmoothStep(0, 0.4f, peaksAndValleys);
+            return (int)Mathf.Round(Mathf.Lerp(8, 32, t));
+        }
+        else
+        {
+            t = Mathf.SmoothStep(0.4F, 1, peaksAndValleys);
+            return (int)Mathf.Round(Mathf.Lerp(32, 24, t));
         }
     }
 

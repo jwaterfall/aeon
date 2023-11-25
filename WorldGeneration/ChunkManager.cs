@@ -56,6 +56,7 @@ public partial class ChunkManager : Node3D
     public IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3 playerPosition)
     {
         var radius = Configuration.CHUNK_LOAD_RADIUS;
+        var verticalRadius = Configuration.VERTICAL_CHUNK_LOAD_RADIUS;
         var playerChunkPosition = (Vector3I)(playerPosition / Configuration.CHUNK_DIMENSION).Round();
 
         int x = 0, z = 0;
@@ -63,7 +64,7 @@ public partial class ChunkManager : Node3D
 
         for (int i = 0; i < Math.Pow((2 * radius + 1), 2); i++)
         {
-            for (int y = -radius; y <= radius; y++)
+            for (int y = -verticalRadius; y <= verticalRadius; y++)
             {
                 // Check if the absolute values of x, y, and z are all less than or equal to the respective radii
                 if (-radius <= x && x <= radius &&
