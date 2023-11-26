@@ -1,50 +1,104 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class ChunkManager : Node3D
 {
     private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/Chunk.tscn") as PackedScene;
-    static readonly Dictionary<Vector3I, Chunk> chunks = new();
-    static readonly Queue<Chunk> generateQueue = new();
+    private readonly Dictionary<Vector2I, Chunk> chunks = new();
+    private readonly List<Vector2I> chunksToGenerate = new();
+    private readonly List<Vector2I> activeChunks = new();
+    private readonly List<Vector2I> staleChunks = new();
+    private Task[] generationTasks = new Task[6];
+    private Vector3? previousPlayerPosition;
 
     public void Update(Vector3 playerPosition)
     {
-        foreach (var chunkPosition in GetNearbyChunkPositions(playerPosition))
+        GenerateNextChunk();
+
+        // If the player hasn't moved skip new chunk generation
+        if (previousPlayerPosition == playerPosition)
         {
-            if (!chunks.ContainsKey(chunkPosition))
+            return;
+        }
+
+        previousPlayerPosition = playerPosition;
+
+        var newChunkPositions = GetNearbyChunkPositions(playerPosition);
+
+        // If the a chunk waiting to be generated is no longer in range stop it from trying to generate
+        List<Vector2I> chunksToStopGenerating = new();
+        foreach (var chunkPosition in chunksToGenerate)
+        {
+            if (!newChunkPositions.Contains(chunkPosition))
             {
-                Chunk chunk = chunkScene.Instantiate<Chunk>();
-                chunk.SetChunkPosition(chunkPosition);
-                AddChild(chunk);
-                chunks.Add(chunkPosition, chunk);
-                generateQueue.Enqueue(chunk);
-            }
-            else
-            {
-                Chunk chunk = chunks[chunkPosition];
-                chunk.Visit();
+                chunksToStopGenerating.Add(chunkPosition);
             }
         }
 
-        GenerateNextChunk();
+        foreach (var chunkPosition in chunksToStopGenerating)
+        {
+            chunksToGenerate.Remove(chunkPosition);
+            GD.Print("Stopping generation: ", chunkPosition);
+        }
+
+        // If an active chunk is no longer in range set it to stale
+        List<Vector2I> chunksToMakeStale = new();
+        foreach (var chunkPosition in activeChunks)
+        {
+            if (!newChunkPositions.Contains(chunkPosition))
+            {
+                chunksToMakeStale.Add(chunkPosition);
+            }
+        }
+
+        foreach (var chunkPosition in chunksToMakeStale)
+        {
+            activeChunks.Remove(chunkPosition);
+            staleChunks.Add(chunkPosition);
+            var chunk = chunks[chunkPosition];
+            chunk.Visible = false;
+            GD.Print("Making stale: ", chunkPosition);
+        }
+
+        // Generate or restore chunks in range
+        foreach (var chunkPosition in newChunkPositions)
+        {
+            if (staleChunks.Contains(chunkPosition))
+            {
+               staleChunks.Remove(chunkPosition);
+               activeChunks.Add(chunkPosition);
+                var chunk = chunks[chunkPosition];
+                chunk.Visible = true;
+                GD.Print("Reviving: ", chunkPosition);
+            } 
+            else if (!activeChunks.Contains(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
+            {
+                chunksToGenerate.Add(chunkPosition);
+            }
+        }
     }
 
-    public static void removeChunk(Chunk chunk)
-    {
-        chunks.Remove(chunk.ChunkPosition);
-    }
-
-    private static Task[] generationTasks = new Task[6];
-    public static void GenerateNextChunk()
+    public void GenerateNextChunk()
     {
         for (int i = 0; i < generationTasks.Length; i++)
         {
             Task task = generationTasks[i];
-            if (generateQueue.Count > 0 && (task == null || task.IsCompleted))
+            if (chunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
             {
-                Chunk chunk = generateQueue.Dequeue();
+                var chunkPosition = chunksToGenerate[0];
+                chunksToGenerate.RemoveAt(0);
+
+                Chunk chunk = chunkScene.Instantiate<Chunk>();
+                chunk.SetChunkPosition(chunkPosition);
+                AddChild(chunk);
+                chunks.Add(chunkPosition, chunk);
+                activeChunks.Add(chunkPosition);
+
+                GD.Print("Generating: ", chunkPosition);
+
                 generationTasks[i] = Task.Run(() => {
                     chunk.Generate();
                     chunk.Update();
@@ -53,26 +107,20 @@ public partial class ChunkManager : Node3D
         }
     }
 
-    public IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3 playerPosition)
+    public IEnumerable<Vector2I> GetNearbyChunkPositions(Vector3 playerPosition)
     {
         var radius = Configuration.CHUNK_LOAD_RADIUS;
-        var verticalRadius = Configuration.VERTICAL_CHUNK_LOAD_RADIUS;
-        var playerChunkPosition = (Vector3I)(playerPosition / Configuration.CHUNK_DIMENSION).Round();
+        var playerChunkPosition = (Vector2I)(new Vector2(playerPosition.X, playerPosition.Z) / new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z)).Floor();
 
         int x = 0, z = 0;
         int dx = 0, dz = -1;
 
         for (int i = 0; i < Math.Pow((2 * radius + 1), 2); i++)
         {
-            for (int y = -verticalRadius; y <= verticalRadius; y++)
+            var chunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Y);
+            if (((Vector2)playerChunkPosition).DistanceTo((Vector2)chunkPosition) <= radius)
             {
-                // Check if the absolute values of x, y, and z are all less than or equal to the respective radii
-                if (-radius <= x && x <= radius &&
-                    -radius <= y && y <= radius &&
-                    -radius <= z && z <= radius)
-                {
-                    yield return new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
-                }
+                yield return chunkPosition;
             }
 
             // If at a corner, change direction

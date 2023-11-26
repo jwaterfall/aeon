@@ -32,9 +32,7 @@ public partial class Chunk : StaticBody3D
     private ConcavePolygonShape3D collisionShape;
     private CollisionShape3D collisionShapeNode;
     private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
-	public Vector3I ChunkPosition;
-    private double timeSinceVisit = 0;
-    public bool generated = false;
+	public Vector2I ChunkPosition;
     private FastNoiseLite noise = new();
 
     List<List<List<BlockType>>> blockTypes = new();
@@ -49,21 +47,6 @@ public partial class Chunk : StaticBody3D
         AddChild(meshInstance);
     }
 
-    public override void _Process(double delta)
-    {
-        timeSinceVisit += delta;
-
-        if (timeSinceVisit > Configuration.CHUNK_UNLOAD_TIME && generated)
-        {
-            QueueFree();
-            ChunkManager.removeChunk(this);
-        }
-    }
-    public void Visit()
-    {
-        timeSinceVisit = 0;
-    }
-
     public void Generate()
 	{
         for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
@@ -74,7 +57,7 @@ public partial class Chunk : StaticBody3D
                 blockTypes[x].Add(new List<BlockType>());
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var globalPosition = ChunkPosition * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
+                    var globalPosition = new Vector3(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
                     // Use different noise functions for various aspects of terrain generation
                     float continentalnessScale = 0.1f; // Adjust this scale factor as needed
@@ -88,7 +71,7 @@ public partial class Chunk : StaticBody3D
                     int height = MapContinentalnessToHeight(continentalness) + MapPeaksAndValleysToHeight(peaksAndValleys);
 
                     // Adjust parameters based on noise values
-                    int waterLevel = 0;
+                    int waterLevel = 64;
 
                     BlockType blockType = BlockTypes.Air;
 
@@ -123,32 +106,32 @@ public partial class Chunk : StaticBody3D
 
         if (continentalness <= -0.6f)
         {
-            return -32;
+            return 32;
         }
         else if (continentalness <= -0.4f)
         {
             t = Mathf.SmoothStep(-0.6f, -0.4f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(-32, 8, t));
+            return (int)Mathf.Round(Mathf.Lerp(32, 72, t));
         }
         else if (continentalness <= -0.25f)
         {
             t = Mathf.SmoothStep(-0.4f, -0.25f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(8, 16, t));
+            return (int)Mathf.Round(Mathf.Lerp(72, 80, t));
         }
         else if (continentalness <= -0.2f)
         {
             t = Mathf.SmoothStep(-0.25f, -0.2f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(16, 64, t));
+            return (int)Mathf.Round(Mathf.Lerp(80, 128, t));
         }
         else if (continentalness <= 0)
         {
             t = Mathf.SmoothStep(-0.2f, 0, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(64, 70, t));
+            return (int)Mathf.Round(Mathf.Lerp(128, 134, t));
         }
         else
         {
             t = Mathf.SmoothStep(0, 1, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(70, 96, t));
+            return (int)Mathf.Round(Mathf.Lerp(134, 160, t));
         }
     }
 
@@ -210,8 +193,6 @@ public partial class Chunk : StaticBody3D
     {
         meshInstance.Mesh = mesh;
         collisionShapeNode.Shape = collisionShape;
-
-        generated = true;
     }
 
     /// <summary>
@@ -286,9 +267,9 @@ public partial class Chunk : StaticBody3D
 		surfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
 	}
 
-	public void SetChunkPosition(Vector3I newChunkPosition)
+	public void SetChunkPosition(Vector2I newChunkPosition)
 	{
 		ChunkPosition = newChunkPosition;
-		Position = newChunkPosition * Configuration.CHUNK_DIMENSION;
+		Position = new Vector3I(newChunkPosition.X, 0, newChunkPosition.Y) * Configuration.CHUNK_DIMENSION;
 	}
 }
