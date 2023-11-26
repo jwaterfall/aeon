@@ -60,18 +60,21 @@ public partial class Chunk : StaticBody3D
                     var globalPosition = new Vector3(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
                     // Use different noise functions for various aspects of terrain generation
-                    float continentalnessScale = 0.1f; // Adjust this scale factor as needed
+                    float continentalnessScale = 0.05f; // Adjust this scale factor as needed
                     float continentalness = noise.GetNoise2Dv(new Vector2(globalPosition.X * continentalnessScale, globalPosition.Z * continentalnessScale));
 
-                    // Use different noise functions for various aspects of terrain generation
                     float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
                     float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
 
+                    float errosionScale = 0.025f; // Adjust this scale factor as needed
+                    float errosion = noise.GetNoise2Dv(new Vector2(globalPosition.X * errosionScale, globalPosition.Z * errosionScale));
+
+                    int waterLevel = 64;
+
                     // Map continentalness to the desired height range
-                    int height = MapContinentalnessToHeight(continentalness) + MapPeaksAndValleysToHeight(peaksAndValleys);
+                    int height = Mathf.RoundToInt((waterLevel * MapContinentalnessToMultiplier(continentalness)) + (96  * MapPeaksAndValleysToMultiplier(peaksAndValleys)));
 
                     // Adjust parameters based on noise values
-                    int waterLevel = 64;
 
                     BlockType blockType = BlockTypes.Air;
 
@@ -83,7 +86,7 @@ public partial class Chunk : StaticBody3D
 					{
 						blockType = BlockTypes.Stone;
 					}
-                    if (height <= 68 && globalPosition.Y <= height)
+                    else if(height <= 68 && globalPosition.Y <= height)
                     {
                         blockType = BlockTypes.Sand;
                     }
@@ -102,72 +105,69 @@ public partial class Chunk : StaticBody3D
         }
     }
 
-    // Custom non-linear mapping function based on the provided values
-    private int MapContinentalnessToHeight(float continentalness)
+    private float MapContinentalnessToMultiplier(float continentalness)
     {
-        // Use the provided non-linear mapping values with smoothstep
         float t;
 
         if (continentalness <= -0.6f)
         {
-            return 32;
+            return 0.5f;
         }
         else if (continentalness <= -0.4f)
         {
             t = Mathf.SmoothStep(-0.6f, -0.4f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(32, 72, t));
+            return Mathf.Lerp(0.5f, 1.125f, t);
         }
         else if (continentalness <= -0.25f)
         {
             t = Mathf.SmoothStep(-0.4f, -0.25f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(72, 80, t));
+            return Mathf.Lerp(1.125f, 1.25f, t);
         }
         else if (continentalness <= -0.2f)
         {
             t = Mathf.SmoothStep(-0.25f, -0.2f, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(80, 128, t));
+            return Mathf.Lerp(1.25f, 2, t);
         }
         else if (continentalness <= 0)
         {
             t = Mathf.SmoothStep(-0.2f, 0, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(128, 134, t));
+            return Mathf.Lerp(2, 2.1f, t);
         }
         else
         {
             t = Mathf.SmoothStep(0, 1, continentalness);
-            return (int)Mathf.Round(Mathf.Lerp(134, 160, t));
+            return Mathf.Lerp(2.1f, 2.5f, t);
         }
     }
 
-    private int MapPeaksAndValleysToHeight(float peaksAndValleys)
+    private float MapPeaksAndValleysToMultiplier(float peaksAndValleys)
     {
-        // Use the provided non-linear mapping values with smoothstep
         float t;
 
         if (peaksAndValleys <= -0.8f)
         {
             t = Mathf.SmoothStep(0, -0.8f, peaksAndValleys);
-            return (int)Mathf.Round(Mathf.Lerp(-16, -10, t));
+            return Mathf.Lerp(-0.25f, 0.15f, t);
         }
         else if (peaksAndValleys <= -0.4f)
         {
             t = Mathf.SmoothStep(-0.8f, -0.4f, peaksAndValleys);
-            return (int)Mathf.Round(Mathf.Lerp(-10, 0, t));
+            return Mathf.Lerp(0.15f, 0, t);
         }
         else if (peaksAndValleys <= 0)
         {
             t = Mathf.SmoothStep(-0.4f, -0f, peaksAndValleys);
-            return (int)Mathf.Round(Mathf.Lerp(0, 8, t));
+            return Mathf.Lerp(0, 0.15f, t);
         }
         else if (peaksAndValleys <= 0.4)
         {
             t = Mathf.SmoothStep(0, 0.4f, peaksAndValleys);
-            return (int)Mathf.Round(Mathf.Lerp(8, 32, t));
+            return Mathf.Lerp(0.15f, 0.5f, t);
         }
         else
         {
             t = Mathf.SmoothStep(0.4F, 1, peaksAndValleys);
-            return (int)Mathf.Round(Mathf.Lerp(32, 24, t));
+            return Mathf.Lerp(0.5f, 0.35f, t);
         }
     }
 
