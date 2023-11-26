@@ -217,19 +217,19 @@ public partial class Chunk : StaticBody3D
     /// <summary>
     /// <c>Returns</c> true if the given block is transparent or outside of the chunk
     /// </summary>
-    private bool CheckTransparent(Vector3 localPosition)
+    private bool CheckTransparent(Vector3I localPosition, BlockType sourceBlockType)
 	{
 		if (
-			localPosition.X >= 0 && localPosition.X < Configuration.CHUNK_DIMENSION.X &&
+			!(localPosition.X >= 0 && localPosition.X < Configuration.CHUNK_DIMENSION.X &&
             localPosition.Y >= 0 && localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
-            localPosition.Z >= 0 && localPosition.Z < Configuration.CHUNK_DIMENSION.Z
+            localPosition.Z >= 0 && localPosition.Z < Configuration.CHUNK_DIMENSION.Z)
 		)
         {
-            BlockType blockType = blockTypes[(int)localPosition.X][(int)localPosition.Y][(int)localPosition.Z];
-            return !blockType.Solid;
+            return true;
         }
 
-		return true;
+        BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
+        return (!blockType.Solid) && (blockType != sourceBlockType);
     }
 
 	private void CreateBlock(Vector3I localPosition)
@@ -240,27 +240,27 @@ public partial class Chunk : StaticBody3D
 			return;
 		}
 
-		if (CheckTransparent(localPosition + Vector3.Up))
+		if (CheckTransparent(localPosition + Vector3I.Up, blockType))
         {
 			CreateFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop);
         }
-        if (CheckTransparent(localPosition + Vector3.Down))
+        if (CheckTransparent(localPosition + Vector3I.Down, blockType))
         {
 			CreateFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom);
         }
-        if (CheckTransparent(localPosition + Vector3.Left))
+        if (CheckTransparent(localPosition + Vector3I.Left, blockType))
         {
             CreateFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft);
         }
-        if (CheckTransparent(localPosition + Vector3.Right))
+        if (CheckTransparent(localPosition + Vector3I.Right, blockType))
         {
             CreateFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight);
         }
-        if (CheckTransparent(localPosition + Vector3.Forward))
+        if (CheckTransparent(localPosition + Vector3I.Forward, blockType))
         {
             CreateFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack);
         }
-        if (CheckTransparent(localPosition + Vector3.Back))
+        if (CheckTransparent(localPosition + Vector3I.Back, blockType))
         {
             CreateFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront);
         }
