@@ -12,4 +12,5 @@ public partial class Configuration : Node
 	public static readonly float CHUNK_UNLOAD_TIME = 1;
 	public static readonly bool FLYING_ENABLED = false;
 	public static readonly int CHUNK_LOAD_RADIUS = 8;
+    public static readonly int MAX_STALE_CHUNKS = 100;
 }

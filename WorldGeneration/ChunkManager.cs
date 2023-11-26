@@ -76,6 +76,17 @@ public partial class ChunkManager : Node3D
                 chunksToGenerate.Add(chunkPosition);
             }
         }
+
+        if (staleChunks.Count > Configuration.MAX_STALE_CHUNKS)
+        {
+            var chunkPosition = staleChunks[0];
+            staleChunks.RemoveAt(0);
+
+            var chunk = chunks[chunkPosition];
+            chunks.Remove(chunkPosition);
+
+            chunk.QueueFree();
+        }
     }
 
     public void GenerateNextChunk()
