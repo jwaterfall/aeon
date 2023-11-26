@@ -60,4 +60,14 @@ public static class BlockTypes
         TextureAtlasOffsetFront = new(0, 1),
         TextureAtlasOffsetBack = new(0, 1),
     };
+
+    public static readonly BlockType Sand = new BlockType
+    {
+        TextureAtlasOffsetTop = new(2, 1),
+        TextureAtlasOffsetBottom = new(2, 1),
+        TextureAtlasOffsetLeft = new(2, 1),
+        TextureAtlasOffsetRight = new(2, 1),
+        TextureAtlasOffsetFront = new(2, 1),
+        TextureAtlasOffsetBack = new(2, 1),
+    };
 }

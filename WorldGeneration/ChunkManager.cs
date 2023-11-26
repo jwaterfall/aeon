@@ -41,7 +41,6 @@ public partial class ChunkManager : Node3D
         foreach (var chunkPosition in chunksToStopGenerating)
         {
             chunksToGenerate.Remove(chunkPosition);
-            GD.Print("Stopping generation: ", chunkPosition);
         }
 
         // If an active chunk is no longer in range set it to stale
@@ -60,7 +59,6 @@ public partial class ChunkManager : Node3D
             staleChunks.Add(chunkPosition);
             var chunk = chunks[chunkPosition];
             chunk.Visible = false;
-            GD.Print("Making stale: ", chunkPosition);
         }
 
         // Generate or restore chunks in range
@@ -72,7 +70,6 @@ public partial class ChunkManager : Node3D
                activeChunks.Add(chunkPosition);
                 var chunk = chunks[chunkPosition];
                 chunk.Visible = true;
-                GD.Print("Reviving: ", chunkPosition);
             } 
             else if (!activeChunks.Contains(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
             {
@@ -96,8 +93,6 @@ public partial class ChunkManager : Node3D
                 AddChild(chunk);
                 chunks.Add(chunkPosition, chunk);
                 activeChunks.Add(chunkPosition);
-
-                GD.Print("Generating: ", chunkPosition);
 
                 generationTasks[i] = Task.Run(() => {
                     chunk.Generate();

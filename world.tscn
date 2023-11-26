@@ -1,34 +1,34 @@
-[gd_scene load_steps=7 format=3 uid="uid://bt8r1sncvbh6k"]
+[gd_scene load_steps=6 format=3 uid="uid://bt8r1sncvbh6k"]
 
 [ext_resource type="Script" path="res://World.cs" id="1_4ocwg"]
 [ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://player.tscn" id="2_eji6k"]
 [ext_resource type="Script" path="res://WorldGeneration/ChunkManager.cs" id="3_a5p3c"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_2707j"]
-sky_top_color = Color(0.690196, 0.694118, 0.964706, 1)
-sky_horizon_color = Color(0.690196, 0.360784, 0.964706, 1)
+[sub_resource type="Sky" id="Sky_f8ofp"]
 
-[sub_resource type="Sky" id="Sky_ht82o"]
-sky_material = SubResource("ProceduralSkyMaterial_2707j")
-
-[sub_resource type="Environment" id="Environment_05uhr"]
-sky = SubResource("Sky_ht82o")
-ambient_light_source = 3
-ambient_light_color = Color(0.690196, 0.694118, 0.964706, 1)
-fog_enabled = true
-fog_density = 0.0005
+[sub_resource type="Environment" id="Environment_p7a2h"]
+background_mode = 1
+background_color = Color(0.294118, 0.647059, 0.898039, 1)
+sky = SubResource("Sky_f8ofp")
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.1
+fog_light_color = Color(0.517647, 0.552941, 0.607843, 1)
+fog_light_energy = 0.6
+fog_sky_affect = 0.6
 
 [node name="World" type="Node3D"]
 script = ExtResource("1_4ocwg")
 
 [node name="Player" parent="." instance=ExtResource("2_eji6k")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 64, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 256, 16)
 
 [node name="ChunkManager" type="Node3D" parent="."]
 script = ExtResource("3_a5p3c")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_05uhr")
+environment = SubResource("Environment_p7a2h")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 light_color = Color(0.690196, 0.694118, 0.964706, 1)
+light_energy = 0.25

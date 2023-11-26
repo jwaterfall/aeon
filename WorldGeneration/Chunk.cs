@@ -14,7 +14,7 @@ public partial class Chunk : StaticBody3D
         public static readonly int[] BACK = new int[] { 2, 0, 1, 3 };
     }
 
-    private static readonly Vector3[] vertices = new Vector3[]
+    private static readonly Vector3I[] vertices = new Vector3I[]
 	{
 		new(0, 0, 0), // 0
 		new(1, 0, 0), // 1
@@ -83,7 +83,11 @@ public partial class Chunk : StaticBody3D
 					{
 						blockType = BlockTypes.Stone;
 					}
-					else if (globalPosition.Y < height)
+                    if (height <= 68 && globalPosition.Y <= height)
+                    {
+                        blockType = BlockTypes.Sand;
+                    }
+                    else if (globalPosition.Y < height)
 					{
 						blockType = BlockTypes.Dirt;
                     }
