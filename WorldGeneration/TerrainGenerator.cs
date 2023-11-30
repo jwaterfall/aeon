@@ -14,11 +14,11 @@ public partial class TerrainGenerator : Node
         float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
         float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
 
-        float erosionScale = 0.01f; // Adjust this scale factor as needed
+        float erosionScale = 0.025f; // Adjust this scale factor as needed
         float erosion = noise.GetNoise2Dv(new Vector2(globalPosition.X * erosionScale, globalPosition.Z * erosionScale));
 
         // Map continentalness to the desired height range
-        int height = Mathf.RoundToInt(((waterLevel * MapContinentalnessToMultiplier(continentalness)) + (96 * MapPeaksAndValleysToMultiplier(peaksAndValleys))) * MapErosionToMultiplier(erosion));
+        int height = Mathf.RoundToInt(((waterLevel * MapContinentalnessToMultiplier(continentalness)) + (96 * MapPeaksAndValleysToMultiplier(peaksAndValleys))));
 
         return height;
     }
@@ -125,12 +125,12 @@ public partial class TerrainGenerator : Node
         else if (errosion <= 0.7f)
         {
             t = Mathf.SmoothStep(0.6f, 0.7f, errosion);
-            return Mathf.Lerp(0.4f, 0.2f, t);
+            return Mathf.Lerp(0.4f, 0.3f, t);
         }
         else
         {
             t = Mathf.SmoothStep(0.7f, 1f, errosion);
-            return Mathf.Lerp(0.2f, 0.1f, t);
+            return Mathf.Lerp(0.3f, 0.2f, t);
         }
     }
 }
