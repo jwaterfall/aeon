@@ -1,0 +1,16 @@
+[gd_scene load_steps=4 format=3 uid="uid://cifcreilnrjsb"]
+
+[ext_resource type="Script" path="res://WorldGeneration/TerrainGenerator.cs" id="1_n5g71"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_yt38w"]
+frequency = 0.0003
+
+[sub_resource type="Curve" id="Curve_6pxyd"]
+max_value = 3.0
+_data = [Vector2(0, 0.5), 0.0, 0.0, 0, 0, Vector2(0.2, 0.5), 0.0, 0.0, 0, 0, Vector2(0.3, 1.125), 0.0, 0.0, 0, 0, Vector2(0.375, 1.25), 0.0, 0.0, 0, 0, Vector2(0.4, 2), 0.0, 0.0, 0, 0, Vector2(0.5, 2.1), 0.0, 0.0, 0, 0, Vector2(1, 2.5), 0.0, 0.0, 0, 0]
+point_count = 7
+
+[node name="TerrainGenerator" type="Node3D"]
+script = ExtResource("1_n5g71")
+continentalnessNoise = SubResource("FastNoiseLite_yt38w")
+continentalnessCurve = SubResource("Curve_6pxyd")

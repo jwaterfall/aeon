@@ -93,6 +93,8 @@ public partial class ChunkManager : Node3D
 
     public void GenerateNextChunk()
     {
+        var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
+
         for (int i = 0; i < generationTasks.Length; i++)
         {
             Task task = generationTasks[i];
@@ -108,7 +110,7 @@ public partial class ChunkManager : Node3D
                 activeChunks.Add(chunkPosition);
 
                 generationTasks[i] = Task.Run(() => {
-                    chunk.GenerateBlocks();
+                    chunk.GenerateBlocks(terrainGenerator);
                 });
             }
         }

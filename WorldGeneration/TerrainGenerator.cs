@@ -1,64 +1,31 @@
 using Godot;
 using System;
 
-public partial class TerrainGenerator : Node
+public partial class TerrainGenerator : Node3D
 {
-    private static FastNoiseLite noise = new();
+    [Export]
+    private FastNoiseLite continentalnessNoise;
+    [Export]
+    private Curve continentalnessCurve;
 
-    public static float GetHeight(Vector3I globalPosition, int waterLevel)
+    public float GetHeight(Vector3I globalPosition, int waterLevel)
     {
         // Use different noise functions for various aspects of terrain generation
-        float continentalnessScale = 0.05f; // Adjust this scale factor as needed
-        float continentalness = noise.GetNoise2Dv(new Vector2(globalPosition.X * continentalnessScale, globalPosition.Z * continentalnessScale));
+        float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1)/2;
 
-        float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
-        float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
+        //float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
+        //float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
 
-        float erosionScale = 0.025f; // Adjust this scale factor as needed
-        float erosion = noise.GetNoise2Dv(new Vector2(globalPosition.X * erosionScale, globalPosition.Z * erosionScale));
+        //float erosionScale = 0.025f; // Adjust this scale factor as needed
+        //float erosion = noise.GetNoise2Dv(new Vector2(globalPosition.X * erosionScale, globalPosition.Z * erosionScale));
 
         // Map continentalness to the desired height range
-        int height = Mathf.RoundToInt(((waterLevel * MapContinentalnessToMultiplier(continentalness)) + (96 * MapPeaksAndValleysToMultiplier(peaksAndValleys))));
+        int height = Mathf.RoundToInt(waterLevel * continentalnessCurve.Sample(continentalness));
 
         return height;
     }
 
-    private static float MapContinentalnessToMultiplier(float continentalness)
-    {
-        float t;
-
-        if (continentalness <= -0.6f)
-        {
-            return 0.5f;
-        }
-        else if (continentalness <= -0.4f)
-        {
-            t = Mathf.SmoothStep(-0.6f, -0.4f, continentalness);
-            return Mathf.Lerp(0.5f, 1.125f, t);
-        }
-        else if (continentalness <= -0.25f)
-        {
-            t = Mathf.SmoothStep(-0.4f, -0.25f, continentalness);
-            return Mathf.Lerp(1.125f, 1.25f, t);
-        }
-        else if (continentalness <= -0.2f)
-        {
-            t = Mathf.SmoothStep(-0.25f, -0.2f, continentalness);
-            return Mathf.Lerp(1.25f, 2, t);
-        }
-        else if (continentalness <= 0)
-        {
-            t = Mathf.SmoothStep(-0.2f, 0, continentalness);
-            return Mathf.Lerp(2, 2.1f, t);
-        }
-        else
-        {
-            t = Mathf.SmoothStep(0, 1, continentalness);
-            return Mathf.Lerp(2.1f, 2.5f, t);
-        }
-    }
-
-    private static float MapPeaksAndValleysToMultiplier(float peaksAndValleys)
+    private float MapPeaksAndValleysToMultiplier(float peaksAndValleys)
     {
         float t;
 
@@ -89,7 +56,7 @@ public partial class TerrainGenerator : Node
         }
     }
 
-    private static float MapErosionToMultiplier(float errosion)
+    private float MapErosionToMultiplier(float errosion)
     {
         float t;
 

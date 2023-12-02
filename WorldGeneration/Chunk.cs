@@ -48,7 +48,7 @@ public partial class Chunk : StaticBody3D
         AddChild(meshInstance);
     }
 
-    public void GenerateBlocks()
+    public void GenerateBlocks(TerrainGenerator terrainGenerator)
     {
         for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
         {
@@ -61,7 +61,8 @@ public partial class Chunk : StaticBody3D
                     var globalPosition = new Vector3I(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
                     int waterLevel = 64;
-                    var height = TerrainGenerator.GetHeight(globalPosition, waterLevel);
+
+                    var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
 
                     BlockType blockType = BlockTypes.Air;
 
