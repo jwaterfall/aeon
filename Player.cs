@@ -16,11 +16,6 @@ public partial class Player : CharacterBody3D
 
         Input.MouseMode = Input.MouseModeEnum.Captured;
 	}
-    
-    public override void _Process(double delta)
-    {
-        GD.Print(Engine.GetFramesPerSecond());
-    }
 
 	public override void _Input(InputEvent @event)
     {

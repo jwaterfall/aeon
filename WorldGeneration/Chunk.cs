@@ -33,6 +33,8 @@ public partial class Chunk : StaticBody3D
     private CollisionShape3D collisionShapeNode;
     private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
 	public Vector2I ChunkPosition;
+    public bool generated = false;
+    public bool rendered = false;
 
     List<List<List<BlockType>>> blockTypes = new();
 
@@ -46,8 +48,8 @@ public partial class Chunk : StaticBody3D
         AddChild(meshInstance);
     }
 
-    public void Generate()
-	{
+    public void GenerateBlocks()
+    {
         for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
         {
             blockTypes.Add(new List<List<BlockType>>());
@@ -88,10 +90,12 @@ public partial class Chunk : StaticBody3D
                 }
             }
         }
+
+        generated = true;
     }
 
-    public void Update()
-	{
+    public void Render(Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk)
+    {
         surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
         surfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
@@ -101,7 +105,7 @@ public partial class Chunk : StaticBody3D
 			{
 				for(int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
 				{
-					CreateBlock(new Vector3I(x, y, z));
+                    RenderBlock(new Vector3I(x, y, z), northChunk, southChunk, eastChunk, westChunk);
 				}
 			}
 		}
@@ -110,67 +114,88 @@ public partial class Chunk : StaticBody3D
         mesh = surfaceTool.Commit();
         collisionShape = mesh.CreateTrimeshShape();
 
-        CallThreadSafe("AfterUpdate");
+        CallThreadSafe("AfterRender");
     }
-    public void AfterUpdate()
+    public void AfterRender()
     {
         meshInstance.Mesh = mesh;
         collisionShapeNode.Shape = collisionShape;
+        rendered = true;
     }
 
-    /// <summary>
-    /// <c>Returns</c> true if the given block is transparent or outside of the chunk
-    /// </summary>
-    private bool CheckTransparent(Vector3I localPosition, BlockType sourceBlockType)
-	{
-		if (
-			!(localPosition.X >= 0 && localPosition.X < Configuration.CHUNK_DIMENSION.X &&
-            localPosition.Y >= 0 && localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
-            localPosition.Z >= 0 && localPosition.Z < Configuration.CHUNK_DIMENSION.Z)
-		)
+    private bool CheckTransparent(Vector3I localPosition, BlockType sourceBlockType, Chunk northChunk, Chunk eastChunk, Chunk southChunk, Chunk westChunk)
+    {
+        // If the block is outside of the chunk in the Y axis render the face
+        if (localPosition.Y < 0 || localPosition.Y >= Configuration.CHUNK_DIMENSION.Y)
         {
             return true;
         }
 
+        if (localPosition.X < 0)
+        {
+            // Check if the block in the west neighboring chunk is transparent
+            return westChunk.CheckTransparent(new Vector3I(Configuration.CHUNK_DIMENSION.X - 1, localPosition.Y, localPosition.Z), sourceBlockType, null, null, null, null);
+        }
+
+        if (localPosition.X >= Configuration.CHUNK_DIMENSION.X)
+        {
+            // Check if the block in the east neighboring chunk is transparent
+            return eastChunk.CheckTransparent(new Vector3I(0, localPosition.Y, localPosition.Z), sourceBlockType, null, null, null, null);
+        }
+
+        if (localPosition.Z < 0)
+        {
+            // Check if the block in the north neighboring chunk is transparent
+            return northChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, Configuration.CHUNK_DIMENSION.Z - 1), sourceBlockType, null, null, null, null);
+        }
+
+        if (localPosition.Z >= Configuration.CHUNK_DIMENSION.Z)
+        {
+            // Check if the block in the south neighboring chunk is transparent
+            return southChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, 0), sourceBlockType, null, null, null, null);
+        }
+
+        // Check in the current chunk
         BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
-        return (!blockType.Solid) && (blockType != sourceBlockType);
+        return !blockType.Solid && blockType != sourceBlockType;
     }
 
-	private void CreateBlock(Vector3I localPosition)
-	{
-		BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
+    private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk)
+    {
+        BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
 
-		if (blockType == BlockTypes.Air) {
-			return;
-		}
+        if (blockType == BlockTypes.Air)
+        {
+            return;
+        }
 
-		if (CheckTransparent(localPosition + Vector3I.Up, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Up, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-			CreateFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop);
+            RenderFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop);
         }
-        if (CheckTransparent(localPosition + Vector3I.Down, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Down, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-			CreateFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom);
+            RenderFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom);
         }
-        if (CheckTransparent(localPosition + Vector3I.Left, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Left, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-            CreateFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft);
+            RenderFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft);
         }
-        if (CheckTransparent(localPosition + Vector3I.Right, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Right, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-            CreateFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight);
+            RenderFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight);
         }
-        if (CheckTransparent(localPosition + Vector3I.Forward, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Forward, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-            CreateFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack);
+            RenderFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack);
         }
-        if (CheckTransparent(localPosition + Vector3I.Back, blockType))
+        if (CheckTransparent(localPosition + Vector3I.Back, blockType, northChunk, southChunk, eastChunk, westChunk))
         {
-            CreateFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront);
+            RenderFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront);
         }
 	}
 
-	private void CreateFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset)
+	private void RenderFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset)
 	{
 		Vector3 a = vertices[face[0]] + localPosition;
 		Vector3 b = vertices[face[1]] + localPosition;

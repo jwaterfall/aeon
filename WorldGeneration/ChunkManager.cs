@@ -11,12 +11,14 @@ public partial class ChunkManager : Node3D
     private readonly List<Vector2I> chunksToGenerate = new();
     private readonly List<Vector2I> activeChunks = new();
     private readonly List<Vector2I> staleChunks = new();
-    private Task[] generationTasks = new Task[6];
+    private Task[] generationTasks = new Task[4];
+    private Task[] renderTasks = new Task[1];
     private Vector3? previousPlayerPosition;
 
     public void Update(Vector3 playerPosition)
     {
         GenerateNextChunk();
+        RenderChunks();
 
         // If the player hasn't moved skip new chunk generation
         if (previousPlayerPosition == playerPosition)
@@ -106,8 +108,50 @@ public partial class ChunkManager : Node3D
                 activeChunks.Add(chunkPosition);
 
                 generationTasks[i] = Task.Run(() => {
-                    chunk.Generate();
-                    chunk.Update();
+                    chunk.GenerateBlocks();
+                });
+            }
+        }
+    }
+
+    private bool CanRenderChunk(Chunk chunk)
+    {
+        var northChunkPosition = chunk.ChunkPosition + Vector2I.Up;
+        var eastChunkPosition = chunk.ChunkPosition + Vector2I.Right;
+        var southChunkPosition = chunk.ChunkPosition + Vector2I.Down;
+        var westChunkPosition = chunk.ChunkPosition + Vector2I.Left;
+
+        return chunk.generated && !chunk.rendered &&
+            chunks.ContainsKey(northChunkPosition) &&
+            chunks.ContainsKey(eastChunkPosition) &&
+            chunks.ContainsKey(southChunkPosition) &&
+            chunks.ContainsKey(westChunkPosition) &&
+            chunks[northChunkPosition].generated &&
+            chunks[eastChunkPosition].generated &&
+            chunks[southChunkPosition].generated &&
+            chunks[westChunkPosition].generated;
+    }
+
+    public void RenderChunks()
+    {
+        var chunksToRender = (from chunk in chunks.Values where (CanRenderChunk(chunk)) select chunk).ToList();
+
+        for (int i = 0; i < renderTasks.Length; i++)
+        {
+            Task task = renderTasks[i];
+            if (chunksToRender.Count > 0 && (task == null || task.IsCompleted))
+            {
+                var chunk = chunksToRender[0];
+
+                var northChunkPosition = chunk.ChunkPosition + Vector2I.Up;
+                var eastChunkPosition = chunk.ChunkPosition + Vector2I.Right;
+                var southChunkPosition = chunk.ChunkPosition + Vector2I.Down;
+                var westChunkPosition = chunk.ChunkPosition + Vector2I.Left;
+
+                chunksToRender.RemoveAt(0);
+
+                renderTasks[i] = Task.Run(() => {
+                    chunk.Render(chunks[northChunkPosition], chunks[eastChunkPosition], chunks[southChunkPosition], chunks[westChunkPosition]);
                 });
             }
         }
