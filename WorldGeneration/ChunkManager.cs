@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 public partial class ChunkManager : Node3D
 {
-    private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/Chunk.tscn") as PackedScene;
+    private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/chunk.tscn") as PackedScene;
     private Dictionary<Vector2I, Chunk> chunks = new();
     private List<Vector2I> chunksToGenerate = new();
     private List<Vector2I> generatedChunks = new();

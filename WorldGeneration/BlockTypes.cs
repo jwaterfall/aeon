@@ -1,73 +1,75 @@
 using Godot;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using YamlDotNet.Serialization;
 
 public class BlockType
 {
     public string Name;
-	public bool Solid = true;
-    public Vector2 TextureAtlasOffsetTop = Vector2.Zero;
-	public Vector2 TextureAtlasOffsetBottom = Vector2.Zero;
-    public Vector2 TextureAtlasOffsetLeft = Vector2.Zero;
-	public Vector2 TextureAtlasOffsetRight = Vector2.Zero;
-    public Vector2 TextureAtlasOffsetFront = Vector2.Zero;
-    public Vector2 TextureAtlasOffsetBack = Vector2.Zero;
+    public bool Solid;
+    public Vector2 TextureAtlasOffsetTop;
+    public Vector2 TextureAtlasOffsetBottom;
+    public Vector2 TextureAtlasOffsetLeft;
+    public Vector2 TextureAtlasOffsetRight;
+    public Vector2 TextureAtlasOffsetFront;
+    public Vector2 TextureAtlasOffsetBack;
+}
+
+public class RawBlockType
+{
+    public bool Transparent { get; set; }
+    public List<int> TextureAtlasOffsetTop { get; set; }
+    public List<int> TextureAtlasOffsetBottom { get; set; }
+    public List<int> TextureAtlasOffsetLeft { get; set; }
+    public List<int> TextureAtlasOffsetRight { get; set; }
+    public List<int> TextureAtlasOffsetFront { get; set; }
+    public List<int> TextureAtlasOffsetBack { get; set; }
 }
 
 public static class BlockTypes
 {
-    public static readonly BlockType Air = new BlockType
-    { 
-        Solid = false,
-    };
+    public static bool loaded = false;
+    public static Dictionary<string, BlockType> types = new();
+    public static string blocksDirectory = "data/blocks";
 
-    public static readonly BlockType Grass = new BlockType
+    public static void Load()
     {
-        TextureAtlasOffsetTop = new(0, 0),
-        TextureAtlasOffsetBottom = new(2, 0),
-        TextureAtlasOffsetLeft = new(1, 0),
-        TextureAtlasOffsetRight = new(1, 0),
-        TextureAtlasOffsetFront = new(1, 0),
-        TextureAtlasOffsetBack = new(1, 0),
-    };
+        types.Clear();
+        
+        foreach (var file in Directory.GetFiles(blocksDirectory))
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            var blockType = LoadBlock(name);
+            types.Add(name, blockType);
+        }
 
-    public static readonly BlockType Dirt = new BlockType
-    {
-        TextureAtlasOffsetTop = new(2, 0),
-        TextureAtlasOffsetBottom = new(2, 0),
-        TextureAtlasOffsetLeft = new(2, 0),
-        TextureAtlasOffsetRight = new(2, 0),
-        TextureAtlasOffsetFront = new(2, 0),
-        TextureAtlasOffsetBack = new(2, 0),
-    };
+        loaded = true;
+    }
 
-    public static readonly BlockType Stone = new BlockType
+    private static BlockType LoadBlock(string name)
     {
-        TextureAtlasOffsetTop = new(3, 0),
-        TextureAtlasOffsetBottom = new(3, 0),
-        TextureAtlasOffsetLeft = new(3, 0),
-        TextureAtlasOffsetRight = new(3, 0),
-        TextureAtlasOffsetFront = new(3, 0),
-        TextureAtlasOffsetBack = new(3, 0),
-    };
+        var deserializer = new DeserializerBuilder()
+            .Build();
 
-    public static readonly BlockType Water = new BlockType
-    {
-        Solid = false,
-        TextureAtlasOffsetTop = new(0, 1),
-        TextureAtlasOffsetBottom = new(0, 1),
-        TextureAtlasOffsetLeft = new(0, 1),
-        TextureAtlasOffsetRight = new(0, 1),
-        TextureAtlasOffsetFront = new(0, 1),
-        TextureAtlasOffsetBack = new(0, 1),
-    };
+        var text = File.ReadAllText($"{blocksDirectory}/{name}.yaml");
+        var data = deserializer.Deserialize<RawBlockType>(text);
 
-    public static readonly BlockType Sand = new BlockType
+        return new BlockType
+        {
+            Name = name,
+            Solid = !data.Transparent,
+            TextureAtlasOffsetTop = new Vector2(data.TextureAtlasOffsetTop[0], data.TextureAtlasOffsetTop[1]),
+            TextureAtlasOffsetBottom = new Vector2(data.TextureAtlasOffsetBottom[0], data.TextureAtlasOffsetBottom[1]),
+            TextureAtlasOffsetLeft = new Vector2(data.TextureAtlasOffsetLeft[0], data.TextureAtlasOffsetLeft[1]),
+            TextureAtlasOffsetRight = new Vector2(data.TextureAtlasOffsetRight[0], data.TextureAtlasOffsetRight[1]),
+            TextureAtlasOffsetFront = new Vector2(data.TextureAtlasOffsetFront[0], data.TextureAtlasOffsetFront[1]),
+            TextureAtlasOffsetBack = new Vector2(data.TextureAtlasOffsetBack[0], data.TextureAtlasOffsetBack[1]),
+        };
+    }
+
+    public static BlockType Get(string name)
     {
-        TextureAtlasOffsetTop = new(2, 1),
-        TextureAtlasOffsetBottom = new(2, 1),
-        TextureAtlasOffsetLeft = new(2, 1),
-        TextureAtlasOffsetRight = new(2, 1),
-        TextureAtlasOffsetFront = new(2, 1),
-        TextureAtlasOffsetBack = new(2, 1),
-    };
+        return types.ContainsKey(name) ? types[name] : null;
+    }
 }

@@ -1,0 +1,19 @@
+Transparent: true
+TextureAtlasOffsetTop:
+  - 0
+  - 0
+TextureAtlasOffsetBottom:
+  - 0
+  - 0
+TextureAtlasOffsetLeft:
+  - 0
+  - 0
+TextureAtlasOffsetRight:
+  - 0
+  - 0
+TextureAtlasOffsetFront:
+  - 0
+  - 0
+TextureAtlasOffsetBack:
+  - 0
+  - 0

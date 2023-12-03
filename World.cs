@@ -8,6 +8,12 @@ public partial class World : Node3D
         Node3D player = GetNode<Player>("Player");
         ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
 
+        if (!BlockTypes.loaded)
+        {
+            BlockTypes.Load();
+            return;
+        }
+
         chunkManager.Update(player.Position);
     }
 }

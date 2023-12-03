@@ -64,27 +64,27 @@ public partial class Chunk : StaticBody3D
 
                     var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
 
-                    BlockType blockType = BlockTypes.Air;
+                    BlockType blockType = BlockTypes.Get("air");
 
                     if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
                     {
-                        blockType = BlockTypes.Water;
+                        blockType = BlockTypes.Get("water");
                     }
                     else if(globalPosition.Y < height - 2)
 					{
-						blockType = BlockTypes.Stone;
+                        blockType = BlockTypes.Get("stone");
 					}
                     else if(height <= 68 && globalPosition.Y <= height)
                     {
-                        blockType = BlockTypes.Sand;
+                        blockType = BlockTypes.Get("sand");
                     }
                     else if (globalPosition.Y < height)
 					{
-						blockType = BlockTypes.Dirt;
+                        blockType = BlockTypes.Get("dirt");
                     }
                     else if(globalPosition.Y == height)
                     {
-                        blockType = BlockTypes.Grass;
+                        blockType = BlockTypes.Get("grass");
                     }
 
 					blockTypes[x][y].Add(blockType);
@@ -166,7 +166,7 @@ public partial class Chunk : StaticBody3D
     {
         BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
 
-        if (blockType == BlockTypes.Air)
+        if (blockType.Name == "air")
         {
             return;
         }
