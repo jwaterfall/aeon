@@ -32,7 +32,7 @@ public partial class Chunk : StaticBody3D
     private ConcavePolygonShape3D collisionShape;
     private CollisionShape3D collisionShapeNode;
     private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
-	public Vector2I ChunkPosition;
+	public Vector2I chunkPosition;
     public bool generated = false;
     public bool rendered = false;
 
@@ -58,7 +58,7 @@ public partial class Chunk : StaticBody3D
                 blockTypes[x].Add(new List<BlockType>());
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var globalPosition = new Vector3I(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
+                    var globalPosition = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
                     int waterLevel = 64;
 
@@ -117,6 +117,7 @@ public partial class Chunk : StaticBody3D
 
         CallThreadSafe("AfterRender");
     }
+
     public void AfterRender()
     {
         meshInstance.Mesh = mesh;
@@ -218,7 +219,7 @@ public partial class Chunk : StaticBody3D
 
 	public void SetChunkPosition(Vector2I newChunkPosition)
 	{
-		ChunkPosition = newChunkPosition;
+		chunkPosition = newChunkPosition;
 		Position = new Vector3I(newChunkPosition.X, 0, newChunkPosition.Y) * Configuration.CHUNK_DIMENSION;
 	}
 }

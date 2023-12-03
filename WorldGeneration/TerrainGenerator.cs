@@ -7,20 +7,21 @@ public partial class TerrainGenerator : Node3D
     private FastNoiseLite continentalnessNoise;
     [Export]
     private Curve continentalnessCurve;
+    [Export]
+    private FastNoiseLite peaksAndValleysNoise;
+    [Export]
+    private Curve peaksAndValleysCurve;
 
     public float GetHeight(Vector3I globalPosition, int waterLevel)
     {
-        // Use different noise functions for various aspects of terrain generation
-        float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1)/2;
-
-        //float peaksAndValleysScale = 0.5f; // Adjust this scale factor as needed
-        //float peaksAndValleys = noise.GetNoise2Dv(new Vector2(globalPosition.X * peaksAndValleysScale, globalPosition.Z * peaksAndValleysScale));
+        float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
+        float peaksAndValleys = (peaksAndValleysNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
 
         //float erosionScale = 0.025f; // Adjust this scale factor as needed
         //float erosion = noise.GetNoise2Dv(new Vector2(globalPosition.X * erosionScale, globalPosition.Z * erosionScale));
 
         // Map continentalness to the desired height range
-        int height = Mathf.RoundToInt(waterLevel * continentalnessCurve.Sample(continentalness));
+        int height = Mathf.RoundToInt(continentalnessCurve.Sample(continentalness) + peaksAndValleysCurve.Sample(peaksAndValleys));
 
         return height;
     }
