@@ -36,7 +36,7 @@ public partial class Chunk : StaticBody3D
     public bool generated = false;
     public bool rendered = false;
 
-    List<List<List<BlockType>>> blockTypes = new();
+    private BlockType[] blockTypes = new BlockType[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
 
     public override void _Ready()
     {
@@ -52,10 +52,8 @@ public partial class Chunk : StaticBody3D
     {
         for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
         {
-            blockTypes.Add(new List<List<BlockType>>());
             for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
             {
-                blockTypes[x].Add(new List<BlockType>());
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
                     var globalPosition = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
@@ -87,12 +85,18 @@ public partial class Chunk : StaticBody3D
                         blockType = BlockTypes.Get("grass");
                     }
 
-					blockTypes[x][y].Add(blockType);
+                    int index = GetFlatIndex(new Vector3I(x, y, z));
+                    blockTypes[index] = blockType;
                 }
             }
         }
 
         generated = true;
+    }
+
+    private int GetFlatIndex(Vector3I localPosition)
+    {
+        return localPosition.X + localPosition.Y * Configuration.CHUNK_DIMENSION.X + localPosition.Z * Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y;
     }
 
     public void Render(Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk)
@@ -158,13 +162,13 @@ public partial class Chunk : StaticBody3D
         }
 
         // Check in the current chunk
-        BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
+        BlockType blockType = blockTypes[GetFlatIndex(localPosition)];
         return !blockType.Solid && blockType != sourceBlockType;
     }
 
     private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk)
     {
-        BlockType blockType = blockTypes[localPosition.X][localPosition.Y][localPosition.Z];
+        BlockType blockType = blockTypes[GetFlatIndex(localPosition)];
 
         if (blockType.Name == "air")
         {
