@@ -11,21 +11,30 @@ public partial class ChunkManager : Node3D
     private List<Vector2I> chunksToGenerate = new();
     private List<Vector2I> generatedChunks = new();
     private List<Vector2I> chunksToRemove = new();
-    private Task[] generateTasks = new Task[OS.GetProcessorCount() - 3];
+    private Task[] tasks = new Task[OS.GetProcessorCount() - 2];
     private Task renderTask;
-    private Task removalTask;
+    private Vector2I? lastPlayerChunkPosition;
 
     public void Update(Vector3 playerPosition)
     {
-        //RemoveChunks();
+        RemoveChunks();
         GenerateChunks();
-        RenderChunks();
+        RenderNextChunk();
 
-        var nearbyChunkPositions = GetNearbyChunkPositions(playerPosition);
+        var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
+        if (lastPlayerChunkPosition != null && playerChunkPosition == lastPlayerChunkPosition)
+        {
+            return;
+        }
+
+        lastPlayerChunkPosition = playerChunkPosition;
+
+        var nearbyChunkPositions = GetNearbyChunkPositions(playerChunkPosition);
+       
         foreach (var chunkPosition in chunks.Keys)
         {
-            if (!nearbyChunkPositions.Contains(chunkPosition))
+            if (!nearbyChunkPositions.Contains(chunkPosition) && !chunksToRemove.Contains(chunkPosition))
             {
                 chunksToRemove.Add(chunkPosition);
             }
@@ -35,28 +44,31 @@ public partial class ChunkManager : Node3D
         {
             if (!chunks.ContainsKey(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
             {
-                lock (chunksToGenerate)
-                {
-                    chunksToGenerate.Add(chunkPosition);
-                }
+                chunksToGenerate.Add(chunkPosition);
             }
         }
     }
 
     private void RemoveChunks()
     {
-        if (chunksToRemove.Count > 0 && (removalTask == null || removalTask.IsCompleted))
+        for (int i = 0; i < tasks.Length; i++)
         {
-            var chunkPosition = chunksToRemove[0];
+            Task task = tasks[i];
+            if (chunksToRemove.Count > 0 && (task == null || task.IsCompleted))
+            {
+                var chunkPosition = chunksToRemove[0];
+                chunksToRemove.RemoveAt(0);
 
-            removalTask = Task.Run(() => {
-                lock (chunks)
-                {
-                    var chunk = chunks[chunkPosition];
-                    chunks.Remove(chunkPosition);
-                    chunk.QueueFree();
-                }
-            });
+                tasks[i] = Task.Run(() => {
+                    lock (chunks) lock (generatedChunks)
+                    {
+                        generatedChunks.Remove(chunkPosition);
+                        var chunk = chunks[chunkPosition];
+                        chunks.Remove(chunkPosition);
+                        chunk.QueueFree();
+                    }
+                });
+            }
         }
     }
 
@@ -64,49 +76,52 @@ public partial class ChunkManager : Node3D
     {
         var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
 
-        lock (chunksToGenerate) {
-            for (int i = 0; i < generateTasks.Length; i++)
+        for (int i = 0; i < tasks.Length; i++)
+        {
+            Task task = tasks[i];
+            if (chunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
             {
-                Task task = generateTasks[i];
-                if (chunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
+                var chunkPosition = chunksToGenerate[0];
+                chunksToGenerate.RemoveAt(0);
+
+                Chunk chunk = chunkScene.Instantiate<Chunk>();
+                chunk.SetChunkPosition(chunkPosition);
+                AddChild(chunk);
+
+                lock (chunks)
                 {
-                    var chunkPosition = chunksToGenerate[0];
-                    chunksToGenerate.RemoveAt(0);
-
-                    Chunk chunk = chunkScene.Instantiate<Chunk>();
-                    chunk.SetChunkPosition(chunkPosition);
-                    AddChild(chunk);
-
-                    lock (chunks)
-                    {
-                        chunks[chunkPosition] = chunk;
-                    }
-
-                    generateTasks[i] = Task.Run(() =>
-                    {
-                        chunk.GenerateBlocks(terrainGenerator);
-
-                        lock (generatedChunks)
-                        {
-                            generatedChunks.Add(chunkPosition);
-                        }
-                    });
+                    chunks[chunkPosition] = chunk;
                 }
+
+                tasks[i] = Task.Run(() =>
+                {
+                    chunk.GenerateBlocks(terrainGenerator);
+
+                    lock (generatedChunks)
+                    {
+                        generatedChunks.Add(chunkPosition);
+                    }
+                });
             }
         }
     }
 
-    private void RenderChunks ()
+    private void RenderNextChunk ()
     {
         var chunksToRender = (from chunkPosition in generatedChunks
-                              where CanRenderChunk(chunkPosition)
-                              select chunkPosition).ToList();
+                                where CanRenderChunk(chunkPosition)
+                                select chunkPosition).ToList();
 
         if (chunksToRender.Count > 0 && (renderTask == null || renderTask.IsCompleted))
         {
             var chunkPosition = chunksToRender[0];
 
             renderTask = Task.Run(() => {
+                if (!chunks.ContainsKey(chunkPosition))
+                {
+                    return;
+                }
+
                 var chunk = chunks[chunkPosition];
 
                 var northChunkPosition = chunkPosition + Vector2I.Up;
@@ -139,23 +154,22 @@ public partial class ChunkManager : Node3D
         var southChunkPosition = chunkPosition + Vector2I.Down;
         var westChunkPosition = chunkPosition + Vector2I.Left;
 
-        var chunk = chunks[chunkPosition];
-
-        return chunk.generated && !chunk.rendered &&
+        return
+            chunks.ContainsKey(chunkPosition) &&
+            chunks[chunkPosition].generated &&
             chunks.ContainsKey(northChunkPosition) &&
-            chunks.ContainsKey(eastChunkPosition) &&
-            chunks.ContainsKey(southChunkPosition) &&
-            chunks.ContainsKey(westChunkPosition) &&
             chunks[northChunkPosition].generated &&
+            chunks.ContainsKey(eastChunkPosition) &&
             chunks[eastChunkPosition].generated &&
+            chunks.ContainsKey(southChunkPosition) &&
             chunks[southChunkPosition].generated &&
+            chunks.ContainsKey(westChunkPosition) &&
             chunks[westChunkPosition].generated;
     }
 
-    private IEnumerable<Vector2I> GetNearbyChunkPositions(Vector3 playerPosition)
+    private IEnumerable<Vector2I> GetNearbyChunkPositions(Vector2I playerChunkPosition)
     {
         var radius = Configuration.CHUNK_LOAD_RADIUS;
-        var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
         int x = 0, z = 0;
         int dx = 0, dz = -1;

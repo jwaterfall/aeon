@@ -9,7 +9,6 @@ public partial class Configuration : Node
 	public static readonly float MOVEMENT_SPEED = 50;
 	public static readonly float GRAVITY = 30;
 	public static readonly float JUMP_VELOCITY = 7.5f;
-	public static readonly float CHUNK_UNLOAD_TIME = 1;
 	public static readonly bool FLYING_ENABLED = true;
 	public static readonly int CHUNK_LOAD_RADIUS = 10;
     public static readonly int MAX_STALE_CHUNKS = 100;
