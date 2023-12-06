@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Craft", "Craft.csproj", "{E37AB73B-8713-454B-BDC2-B71A3CFA4863}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aeon", "Aeon.csproj", "{E37AB73B-8713-454B-BDC2-B71A3CFA4863}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

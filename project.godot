@@ -20,7 +20,7 @@ TerrainGenerator="*res://world/terrainGenerator.tscn"
 
 [dotnet]
 
-project/assembly_name="Craft"
+project/assembly_name="Aeon"
 
 [input]
 
