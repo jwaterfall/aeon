@@ -1,19 +1,8 @@
 Transparent: false
-TextureAtlasOffsetTop:
-  - 0
-  - 0
-TextureAtlasOffsetBottom:
-  - 2
-  - 0
-TextureAtlasOffsetLeft:
-  - 1
-  - 0
-TextureAtlasOffsetRight:
-  - 1
-  - 0
-TextureAtlasOffsetFront:
-  - 1
-  - 0
-TextureAtlasOffsetBack:
-  - 1
-  - 0
+Textures:
+  Top: grass_top
+  Bottom: dirt
+  Left: grass_side
+  Right: grass_side
+  Front: grass_side
+  Back: grass_side

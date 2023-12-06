@@ -31,12 +31,13 @@ public partial class Chunk : StaticBody3D
 	private MeshInstance3D meshInstance;
     private ConcavePolygonShape3D collisionShape;
     private CollisionShape3D collisionShapeNode;
-    private StandardMaterial3D material = ResourceLoader.Load("res://assets/atlas_material.tres") as StandardMaterial3D;
-	public Vector2I chunkPosition;
+    private TextureAtlasLoader textureAtlas;
+    private BlockTypes blockTypes;
+    public Vector2I chunkPosition;
     public bool generated = false;
     public bool rendered = false;
 
-    private BlockType[] blockTypes = new BlockType[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
+    private BlockType[] chunkBlockTypes = new BlockType[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
 
     public override void _Ready()
     {
@@ -44,8 +45,17 @@ public partial class Chunk : StaticBody3D
         AddChild(collisionShapeNode);
 
         meshInstance = new();
-        meshInstance.MaterialOverride = material;
         AddChild(meshInstance);
+    }
+
+    public void SetTextureAtlas(TextureAtlasLoader textureAtlas)
+    {
+        this.textureAtlas = textureAtlas;
+    }
+
+    public void SetBlockTypes(BlockTypes blockTypes)
+    {
+        this.blockTypes = blockTypes;
     }
 
     public void GenerateBlocks(TerrainGenerator terrainGenerator)
@@ -62,31 +72,31 @@ public partial class Chunk : StaticBody3D
 
                     var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
 
-                    BlockType blockType = BlockTypes.Get("air");
+                    BlockType blockType = blockTypes.Get("air");
 
                     if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
                     {
-                        blockType = BlockTypes.Get("water");
+                        blockType = blockTypes.Get("water");
                     }
                     else if(globalPosition.Y < height - 2)
 					{
-                        blockType = BlockTypes.Get("stone");
+                        blockType = blockTypes.Get("stone");
 					}
                     else if(height <= 68 && globalPosition.Y <= height)
                     {
-                        blockType = BlockTypes.Get("sand");
+                        blockType = blockTypes.Get("sand");
                     }
                     else if (globalPosition.Y < height)
 					{
-                        blockType = BlockTypes.Get("dirt");
+                        blockType = blockTypes.Get("dirt");
                     }
                     else if(globalPosition.Y == height)
                     {
-                        blockType = BlockTypes.Get("grass");
+                        blockType = blockTypes.Get("grass");
                     }
 
                     int index = GetFlatIndex(new Vector3I(x, y, z));
-                    blockTypes[index] = blockType;
+                    chunkBlockTypes[index] = blockType;
                 }
             }
         }
@@ -124,6 +134,7 @@ public partial class Chunk : StaticBody3D
 
     public void AfterRender()
     {
+        meshInstance.MaterialOverride = textureAtlas.textureAtlasMaterial;
         meshInstance.Mesh = mesh;
         collisionShapeNode.Shape = collisionShape;
         rendered = true;
@@ -162,13 +173,13 @@ public partial class Chunk : StaticBody3D
         }
 
         // Check in the current chunk
-        BlockType blockType = blockTypes[GetFlatIndex(localPosition)];
+        BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
         return !blockType.Solid && blockType != sourceBlockType;
     }
 
     private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk)
     {
-        BlockType blockType = blockTypes[GetFlatIndex(localPosition)];
+        BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
 
         if (blockType.Name == "air")
         {
@@ -208,9 +219,9 @@ public partial class Chunk : StaticBody3D
 		Vector3 c = vertices[face[2]] + localPosition;
 		Vector3 d = vertices[face[3]] + localPosition;
 
-		Vector2 uvOffset = textureAtlasOffset / Configuration.TEXTURE_ATLAS_SIZE;
-		float height = 1.0f / Configuration.TEXTURE_ATLAS_SIZE.Y;
-		float width = 1.0f / Configuration.TEXTURE_ATLAS_SIZE.X;
+		Vector2 uvOffset = textureAtlasOffset / textureAtlas.textureAtlasSize;
+		float height = 1.0f / textureAtlas.textureAtlasSize.Y;
+		float width = 1.0f / textureAtlas.textureAtlasSize.X;
 
         Vector2 uva = uvOffset + new Vector2(0, 0);
         Vector2 uvb = uvOffset + new Vector2(0, height);

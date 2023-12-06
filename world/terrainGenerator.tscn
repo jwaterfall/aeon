@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3 uid="uid://cifcreilnrjsb"]
 
-[ext_resource type="Script" path="res://WorldGeneration/TerrainGenerator.cs" id="1_n5g71"]
+[ext_resource type="Script" path="res://world/TerrainGenerator.cs" id="1_n5g71"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_yt38w"]
 frequency = 0.0005

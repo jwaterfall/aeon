@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 public partial class ChunkManager : Node3D
 {
-    private PackedScene chunkScene = ResourceLoader.Load("res://WorldGeneration/chunk.tscn") as PackedScene;
+    private PackedScene chunkScene = ResourceLoader.Load("res://world/chunk.tscn") as PackedScene;
     private Dictionary<Vector2I, Chunk> chunks = new();
     private List<Vector2I> chunksToGenerate = new();
     private List<Vector2I> generatedChunks = new();
@@ -15,10 +15,10 @@ public partial class ChunkManager : Node3D
     private Task renderTask;
     private Vector2I? lastPlayerChunkPosition;
 
-    public void Update(Vector3 playerPosition)
+    public void Update(Vector3 playerPosition, BlockTypes blockTypes, TextureAtlasLoader textureAtlas)
     {
         RemoveChunks();
-        GenerateChunks();
+        GenerateChunks(textureAtlas, blockTypes);
         RenderNextChunk();
 
         var playerChunkPosition = WorldToChunkPosition(playerPosition);
@@ -72,7 +72,7 @@ public partial class ChunkManager : Node3D
         }
     }
 
-    private void GenerateChunks()
+    private void GenerateChunks(TextureAtlasLoader textureAtlas, BlockTypes blockTypes)
     {
         var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
 
@@ -86,6 +86,8 @@ public partial class ChunkManager : Node3D
 
                 Chunk chunk = chunkScene.Instantiate<Chunk>();
                 chunk.SetChunkPosition(chunkPosition);
+                chunk.SetTextureAtlas(textureAtlas);
+                chunk.SetBlockTypes(blockTypes);
                 AddChild(chunk);
 
                 lock (chunks)

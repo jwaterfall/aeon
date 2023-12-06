@@ -12,4 +12,5 @@ public partial class Configuration : Node
 	public static readonly bool FLYING_ENABLED = true;
 	public static readonly int CHUNK_LOAD_RADIUS = 10;
     public static readonly int MAX_STALE_CHUNKS = 100;
+    public static readonly int TEXTURE_SIZE = 32;
 }

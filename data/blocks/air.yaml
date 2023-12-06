@@ -1,19 +1,8 @@
 Transparent: true
-TextureAtlasOffsetTop:
-  - 0
-  - 0
-TextureAtlasOffsetBottom:
-  - 0
-  - 0
-TextureAtlasOffsetLeft:
-  - 0
-  - 0
-TextureAtlasOffsetRight:
-  - 0
-  - 0
-TextureAtlasOffsetFront:
-  - 0
-  - 0
-TextureAtlasOffsetBack:
-  - 0
-  - 0
+Textures:
+  Top: placeholder
+  Bottom: placeholder
+  Left: placeholder
+  Right: placeholder
+  Front: placeholder
+  Back: placeholder
