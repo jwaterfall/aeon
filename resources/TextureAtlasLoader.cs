@@ -1,81 +1,82 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Xml.Linq;
-using YamlDotNet.Serialization;
 
-public class TextureAtlasLoader:FileLoader
+namespace Aeon
 {
-    public Vector2I textureAtlasSize;
-    public StandardMaterial3D textureAtlasMaterial = new();
-    private Dictionary<string, Image> textures = new();
-    private Dictionary<string, Vector2I> textureAtlasOffsets = new();
-    private int textureSize;
-
-    public TextureAtlasLoader(int textureSize, string directory, string extension = ".png") : base(directory, extension)
+    public class TextureAtlasLoader : ResourceLoader
     {
-        this.textureSize = textureSize;
-    }
+        public Vector2I size;
+        public StandardMaterial3D material = new();
+        private Dictionary<string, Image> textures = new();
+        private Dictionary<string, Vector2I> offsets = new();
+        private readonly int textureSize;
 
-    public new Dictionary<string, Vector2I> Load()
-    {
-        foreach (var file in Directory.GetFiles(directory))
+        public TextureAtlasLoader(int textureSize, string directory, string extension = ".png") : base(directory, extension)
         {
-            if (Path.GetExtension(file) != extension)
+            this.textureSize = textureSize;
+        }
+
+        public new Dictionary<string, Vector2I> Load()
+        {
+            foreach (var file in Directory.GetFiles(directory))
             {
-                continue;
+                if (Path.GetExtension(file) != extension)
+                {
+                    continue;
+                }
+
+                var name = Path.GetFileNameWithoutExtension(file);
+                LoadFile(name);
             }
 
-            var name = Path.GetFileNameWithoutExtension(file);
-            LoadFile(name);
+            size = CalculateAtlasSize(textures.Count);
+            Image atlasImage = Image.Create(size.X * textureSize, size.Y * textureSize, false, Image.Format.Rgb8);
+
+            int currentBlockIndex = 0;
+            foreach (var name in textures.Keys)
+            {
+                var image = textures[name];
+
+                var offset = new Vector2I(currentBlockIndex % size.X, currentBlockIndex / size.X);
+                offsets.Add(name, offset);
+
+                Rect2I sourceRect = new(Vector2I.Zero, image.GetSize());
+                Vector2I destRect = new(offset.X * Configuration.TEXTURE_SIZE, offset.Y * Configuration.TEXTURE_SIZE);
+
+                atlasImage.BlitRect(image, sourceRect, destRect);
+
+                currentBlockIndex++;
+            }
+
+            var texture = ImageTexture.CreateFromImage(atlasImage);
+
+            AtlasTexture textureAtlasTexture = new()
+            {
+                Atlas = texture
+            };
+
+            material.AlbedoTexture = textureAtlasTexture;
+            material.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
+
+            loaded = true;
+
+            return offsets;
         }
 
-        textureAtlasSize = CalculateAtlasSize(textures.Count);
-        Image atlasImage = Image.Create(textureAtlasSize.X * textureSize, textureAtlasSize.Y * textureSize, false, Image.Format.Rgb8);
-
-        int currentBlockIndex = 0;
-        foreach (var name in textures.Keys)
+        protected override void LoadFile(string name)
         {
-            var image = textures[name];
-
-            var offset = new Vector2I(currentBlockIndex % textureAtlasSize.X, currentBlockIndex / textureAtlasSize.X);
-            textureAtlasOffsets.Add(name, offset);
-
-            Rect2I sourceRect = new Rect2I(Vector2I.Zero, image.GetSize());
-            Vector2I destRect = new Vector2I(offset.X * Configuration.TEXTURE_SIZE, offset.Y * Configuration.TEXTURE_SIZE);
-
-            atlasImage.BlitRect(image, sourceRect, destRect);
-
-            currentBlockIndex++;
+            Image image = new();
+            image.Load($"{directory}/{name}{extension}");
+            textures.Add(name, image);
         }
 
-        var texture = ImageTexture.CreateFromImage(atlasImage);
+        public static Vector2I CalculateAtlasSize(int count)
+        {
+            var sqrt = Mathf.Sqrt(count);
+            var rounded = Mathf.CeilToInt(sqrt);
 
-        AtlasTexture textureAtlasTexture = new();
-        textureAtlasTexture.Atlas = texture;
-
-        textureAtlasMaterial.AlbedoTexture = textureAtlasTexture;
-        textureAtlasMaterial.TextureFilter = StandardMaterial3D.TextureFilterEnum.Nearest;
-
-        loaded = true;
-
-        return textureAtlasOffsets;
-    }
-
-    protected override void LoadFile(string name)
-    {
-        Image image = new();
-        image.Load($"{directory}/{name}{extension}");
-        GD.Print(name, image.GetFormat());
-        textures.Add(name, image);
-    }
-
-    public static Vector2I CalculateAtlasSize(int count)
-    {
-        var sqrt = Mathf.Sqrt(count);
-        var rounded = Mathf.CeilToInt(sqrt);
-
-        return new Vector2I(rounded, rounded);
+            return new Vector2I(rounded, rounded);
+        }
     }
 }

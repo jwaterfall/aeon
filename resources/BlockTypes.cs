@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using YamlDotNet.Serialization;
@@ -32,41 +31,45 @@ public class Textures
     public string Back { get; set; }
 }
 
-public class BlockTypes:FileLoader
+namespace Aeon
 {
-    public Dictionary<string, BlockType> blockTypes = new();
-    public Dictionary<string, Vector2I> textureAtlasOffsets;
-
-    public BlockTypes(Dictionary<string, Vector2I> textureAtlasOffsets) : base("data/blocks", ".yaml")
+    public class BlockTypes : ResourceLoader
     {
-        this.textureAtlasOffsets = textureAtlasOffsets;
-    }
+        public Dictionary<string, BlockType> blockTypes = new();
+        public Dictionary<string, Vector2I> textureAtlasOffsets;
 
-    public BlockType Get(string name)
-    {
-        return blockTypes.ContainsKey(name) ? blockTypes[name] : null;
-    }
-
-    protected override void LoadFile(string name)
-    {
-        var deserializer = new DeserializerBuilder()
-            .Build();
-
-        var text = File.ReadAllText($"{directory}/{name}{extension}");
-        var data = deserializer.Deserialize<RawBlockType>(text);
-
-        var blockType = new BlockType
+        public BlockTypes(Dictionary<string, Vector2I> textureAtlasOffsets) : base("data/blocks", ".yaml")
         {
-            Name = name,
-            Solid = !data.Transparent,
-            TextureAtlasOffsetTop = textureAtlasOffsets[data.Textures.Top],
-            TextureAtlasOffsetBottom = textureAtlasOffsets[data.Textures.Bottom],
-            TextureAtlasOffsetLeft = textureAtlasOffsets[data.Textures.Left],
-            TextureAtlasOffsetRight = textureAtlasOffsets[data.Textures.Right],
-            TextureAtlasOffsetFront = textureAtlasOffsets[data.Textures.Front],
-            TextureAtlasOffsetBack = textureAtlasOffsets[data.Textures.Back]
-        };
+            this.textureAtlasOffsets = textureAtlasOffsets;
+        }
 
-        blockTypes.Add(name, blockType);
+        public BlockType Get(string name)
+        {
+            return blockTypes.ContainsKey(name) ? blockTypes[name] : null;
+        }
+
+        protected override void LoadFile(string name)
+        {
+            var deserializer = new DeserializerBuilder()
+                .Build();
+
+            var text = File.ReadAllText($"{directory}/{name}{extension}");
+            var data = deserializer.Deserialize<RawBlockType>(text);
+
+            var blockType = new BlockType
+            {
+                Name = name,
+                Solid = !data.Transparent,
+                TextureAtlasOffsetTop = textureAtlasOffsets[data.Textures.Top],
+                TextureAtlasOffsetBottom = textureAtlasOffsets[data.Textures.Bottom],
+                TextureAtlasOffsetLeft = textureAtlasOffsets[data.Textures.Left],
+                TextureAtlasOffsetRight = textureAtlasOffsets[data.Textures.Right],
+                TextureAtlasOffsetFront = textureAtlasOffsets[data.Textures.Front],
+                TextureAtlasOffsetBack = textureAtlasOffsets[data.Textures.Back]
+            };
+
+            blockTypes.Add(name, blockType);
+        }
     }
+
 }
