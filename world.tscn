@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://World.cs" id="1_4ocwg"]
 [ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://player.tscn" id="2_eji6k"]
-[ext_resource type="Script" path="res://WorldGeneration/ChunkManager.cs" id="3_a5p3c"]
+[ext_resource type="Script" path="res://world/ChunkManager.cs" id="3_a5p3c"]
 
 [sub_resource type="Sky" id="Sky_f8ofp"]
 

@@ -1,19 +1,33 @@
 using Godot;
-using System;
 
-public partial class World : Node3D
+namespace Aeon
 {
-    public override void _Process(double delta)
+    public partial class World : Node3D
     {
-        Node3D player = GetNode<Player>("Player");
-        ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
+        private TextureAtlasLoader blockTextureAtlasLoader;
+        private BlockTypes blockTypes;
 
-        if (!BlockTypes.loaded)
+        public override void _Ready()
         {
-            BlockTypes.Load();
-            return;
+            blockTextureAtlasLoader = new TextureAtlasLoader(Configuration.TEXTURE_SIZE, "textures/blocks");
+            blockTypes = new BlockTypes(blockTextureAtlasLoader.Load());
+            blockTypes.Load();
+
+            GD.Print("Loaded textures");
+            GD.Print($"Loaded {blockTypes.blockTypes.Count} block types");
         }
 
-        chunkManager.Update(player.Position);
+        public override void _Process(double delta)
+        {
+            Node3D player = GetNode<Player>("Player");
+            ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
+
+            if (blockTypes != null && !blockTypes.loaded)
+            {
+                return;
+            }
+
+            chunkManager.Update(player.Position, blockTypes, blockTextureAtlasLoader);
+        }
     }
 }
