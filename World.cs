@@ -7,9 +7,6 @@ namespace Aeon
         public override void _Ready()
         {
             BlockTypes.Instance.Load(BlockTextures.Instance.Load());
-
-            GD.Print("Loaded textures");
-            GD.Print($"Loaded {BlockTypes.Instance.blockTypes.Count} block types");
         }
 
         public override void _Process(double delta)
@@ -17,7 +14,7 @@ namespace Aeon
             Node3D player = GetNode<Player>("Player");
             ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
 
-            if (!BlockTypes.Instance.loaded)
+            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded)
             {
                 return;
             }
