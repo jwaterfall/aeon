@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using YamlDotNet.Serialization;
@@ -38,7 +39,7 @@ namespace Aeon
         protected string directory = "data/blocks";
         protected string extension = ".yaml";
         public bool loaded = false;
-        public Dictionary<string, BlockType> blockTypes = new();
+        public ConcurrentDictionary<string, BlockType> blockTypes = new();
 
         private static BlockTypes _instance;
 
@@ -96,7 +97,7 @@ namespace Aeon
                 TextureAtlasOffsetBack = textureAtlasOffsets[data.Textures.Back]
             };
 
-            blockTypes.Add(name, blockType);
+            blockTypes[name] = blockType;
         }
     }
 }
