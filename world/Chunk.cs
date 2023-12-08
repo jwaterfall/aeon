@@ -49,43 +49,46 @@ namespace Aeon
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator)
         {
-            for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+            lock (BlockTypes.Instance)
             {
-                for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
+                for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
                 {
-                    for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
+                    for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
                     {
-                        var globalPosition = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
-
-                        int waterLevel = 64;
-
-                        var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
-
-                        BlockType blockType = BlockTypes.Instance.Get("air");
-
-                        if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
+                        for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                         {
-                            blockType = BlockTypes.Instance.Get("water");
-                        }
-                        else if (globalPosition.Y < height - 2)
-                        {
-                            blockType = BlockTypes.Instance.Get("stone");
-                        }
-                        else if (height <= 68 && globalPosition.Y <= height)
-                        {
-                            blockType = BlockTypes.Instance.Get("sand");
-                        }
-                        else if (globalPosition.Y < height)
-                        {
-                            blockType = BlockTypes.Instance.Get("dirt");
-                        }
-                        else if (globalPosition.Y == height)
-                        {
-                            blockType = BlockTypes.Instance.Get("grass");
-                        }
+                            var globalPosition = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
-                        int index = GetFlatIndex(new Vector3I(x, y, z));
-                        chunkBlockTypes[index] = blockType;
+                            int waterLevel = 64;
+
+                            var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
+
+                            BlockType blockType = BlockTypes.Instance.Get("air");
+
+                            if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
+                            {
+                                blockType = BlockTypes.Instance.Get("water");
+                            }
+                            else if (globalPosition.Y < height - 2)
+                            {
+                                blockType = BlockTypes.Instance.Get("stone");
+                            }
+                            else if (height <= 68 && globalPosition.Y <= height)
+                            {
+                                blockType = BlockTypes.Instance.Get("sand");
+                            }
+                            else if (globalPosition.Y < height)
+                            {
+                                blockType = BlockTypes.Instance.Get("dirt");
+                            }
+                            else if (globalPosition.Y == height)
+                            {
+                                blockType = BlockTypes.Instance.Get("grass");
+                            }
+
+                            int index = GetFlatIndex(new Vector3I(x, y, z));
+                            chunkBlockTypes[index] = blockType;
+                        }
                     }
                 }
             }
