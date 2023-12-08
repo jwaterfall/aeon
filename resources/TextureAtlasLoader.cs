@@ -31,7 +31,7 @@ namespace Aeon
             }
 
             size = CalculateAtlasSize(textures.Count);
-            Image atlasImage = Image.Create(size.X * textureSize, size.Y * textureSize, false, Image.Format.Rgb8);
+            Image atlasImage = Image.Create(size.X * textureSize, size.Y * textureSize, false, Image.Format.Rgba8);
 
             int currentBlockIndex = 0;
             foreach (var name in textures.Keys)
@@ -68,6 +68,7 @@ namespace Aeon
         {
             Image image = new();
             image.Load($"{directory}/{name}{extension}");
+            image.Convert(Image.Format.Rgba8);
             textures.Add(name, image);
         }
 
