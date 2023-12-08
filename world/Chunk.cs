@@ -32,8 +32,6 @@ namespace Aeon
         private MeshInstance3D meshInstance;
         private ConcavePolygonShape3D collisionShape;
         private CollisionShape3D collisionShapeNode;
-        private TextureAtlasLoader textureAtlas;
-        private BlockTypes blockTypes;
         public Vector2I chunkPosition;
         public bool generated = false;
         public bool rendered = false;
@@ -47,16 +45,6 @@ namespace Aeon
 
             meshInstance = new();
             AddChild(meshInstance);
-        }
-
-        public void SetTextureAtlas(TextureAtlasLoader textureAtlas)
-        {
-            this.textureAtlas = textureAtlas;
-        }
-
-        public void SetBlockTypes(BlockTypes blockTypes)
-        {
-            this.blockTypes = blockTypes;
         }
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator)
@@ -73,27 +61,27 @@ namespace Aeon
 
                         var height = terrainGenerator.GetHeight(globalPosition, waterLevel);
 
-                        BlockType blockType = blockTypes.Get("air");
+                        BlockType blockType = BlockTypes.Instance.Get("air");
 
                         if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
                         {
-                            blockType = blockTypes.Get("water");
+                            blockType = BlockTypes.Instance.Get("water");
                         }
                         else if (globalPosition.Y < height - 2)
                         {
-                            blockType = blockTypes.Get("stone");
+                            blockType = BlockTypes.Instance.Get("stone");
                         }
                         else if (height <= 68 && globalPosition.Y <= height)
                         {
-                            blockType = blockTypes.Get("sand");
+                            blockType = BlockTypes.Instance.Get("sand");
                         }
                         else if (globalPosition.Y < height)
                         {
-                            blockType = blockTypes.Get("dirt");
+                            blockType = BlockTypes.Instance.Get("dirt");
                         }
                         else if (globalPosition.Y == height)
                         {
-                            blockType = blockTypes.Get("grass");
+                            blockType = BlockTypes.Instance.Get("grass");
                         }
 
                         int index = GetFlatIndex(new Vector3I(x, y, z));
@@ -135,7 +123,7 @@ namespace Aeon
 
         public void AfterRender()
         {
-            meshInstance.MaterialOverride = textureAtlas.material;
+            meshInstance.MaterialOverride = BlockTextures.Instance.material;
             meshInstance.Mesh = mesh;
             collisionShapeNode.Shape = collisionShape;
             rendered = true;
@@ -220,9 +208,9 @@ namespace Aeon
             Vector3 c = vertices[face[2]] + localPosition;
             Vector3 d = vertices[face[3]] + localPosition;
 
-            Vector2 uvOffset = textureAtlasOffset / textureAtlas.size;
-            float height = 1.0f / textureAtlas.size.Y;
-            float width = 1.0f / textureAtlas.size.X;
+            Vector2 uvOffset = textureAtlasOffset / BlockTextures.Instance.size;
+            float height = 1.0f / BlockTextures.Instance.size.Y;
+            float width = 1.0f / BlockTextures.Instance.size.X;
 
             Vector2 uva = uvOffset + new Vector2(0, 0);
             Vector2 uvb = uvOffset + new Vector2(0, height);

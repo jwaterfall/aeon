@@ -4,20 +4,25 @@ using System.IO;
 
 namespace Aeon
 {
-    public class TextureAtlasLoader : ResourceLoader
+    public class TextureAtlasLoader
     {
+        protected string directory;
+        protected string extension;
+        public bool loaded = false;
         public Vector2I size;
         public StandardMaterial3D material = new();
         private Dictionary<string, Image> textures = new();
         private Dictionary<string, Vector2I> offsets = new();
         private readonly int textureSize;
 
-        public TextureAtlasLoader(int textureSize, string directory, string extension = ".png") : base(directory, extension)
+        public TextureAtlasLoader(int textureSize, string directory, string extension = ".png")
         {
             this.textureSize = textureSize;
+            this.directory = directory;
+            this.extension = extension;
         }
 
-        public new Dictionary<string, Vector2I> Load()
+        public Dictionary<string, Vector2I> Load()
         {
             foreach (var file in Directory.GetFiles(directory))
             {
@@ -64,7 +69,7 @@ namespace Aeon
             return offsets;
         }
 
-        protected override void LoadFile(string name)
+        protected void LoadFile(string name)
         {
             Image image = new();
             image.Load($"{directory}/{name}{extension}");

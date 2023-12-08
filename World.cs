@@ -4,17 +4,12 @@ namespace Aeon
 {
     public partial class World : Node3D
     {
-        private TextureAtlasLoader blockTextureAtlasLoader;
-        private BlockTypes blockTypes;
-
         public override void _Ready()
         {
-            blockTextureAtlasLoader = new TextureAtlasLoader(Configuration.TEXTURE_SIZE, "textures/blocks");
-            blockTypes = new BlockTypes(blockTextureAtlasLoader.Load());
-            blockTypes.Load();
+            BlockTypes.Instance.Load(BlockTextures.Instance.Load());
 
             GD.Print("Loaded textures");
-            GD.Print($"Loaded {blockTypes.blockTypes.Count} block types");
+            GD.Print($"Loaded {BlockTypes.Instance.blockTypes.Count} block types");
         }
 
         public override void _Process(double delta)
@@ -22,12 +17,12 @@ namespace Aeon
             Node3D player = GetNode<Player>("Player");
             ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
 
-            if (blockTypes != null && !blockTypes.loaded)
+            if (!BlockTypes.Instance.loaded)
             {
                 return;
             }
 
-            chunkManager.Update(player.Position, blockTypes, blockTextureAtlasLoader);
+            chunkManager.Update(player.Position);
         }
     }
 }

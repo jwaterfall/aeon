@@ -16,10 +16,10 @@ namespace Aeon
         private Task renderTask;
         private Vector2I? lastPlayerChunkPosition;
 
-        public void Update(Vector3 playerPosition, BlockTypes blockTypes, TextureAtlasLoader textureAtlas)
+        public void Update(Vector3 playerPosition)
         {
             RemoveChunks();
-            GenerateChunks(textureAtlas, blockTypes);
+            GenerateChunks();
             RenderNextChunk();
 
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
@@ -73,7 +73,7 @@ namespace Aeon
             }
         }
 
-        private void GenerateChunks(TextureAtlasLoader textureAtlas, BlockTypes blockTypes)
+        private void GenerateChunks()
         {
             var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
 
@@ -87,8 +87,6 @@ namespace Aeon
 
                     Chunk chunk = chunkScene.Instantiate<Chunk>();
                     chunk.SetChunkPosition(chunkPosition);
-                    chunk.SetTextureAtlas(textureAtlas);
-                    chunk.SetBlockTypes(blockTypes);
                     AddChild(chunk);
 
                     lock (chunks)

@@ -33,22 +33,50 @@ public class Textures
 
 namespace Aeon
 {
-    public class BlockTypes : ResourceLoader
+    public class BlockTypes
     {
+        protected string directory = "data/blocks";
+        protected string extension = ".yaml";
+        public bool loaded = false;
         public Dictionary<string, BlockType> blockTypes = new();
-        public Dictionary<string, Vector2I> textureAtlasOffsets;
 
-        public BlockTypes(Dictionary<string, Vector2I> textureAtlasOffsets) : base("data/blocks", ".yaml")
+        private static BlockTypes _instance;
+
+        public static BlockTypes Instance
         {
-            this.textureAtlasOffsets = textureAtlasOffsets;
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new BlockTypes();
+                }
+                return _instance;
+            }
         }
+
+        private BlockTypes() {}
 
         public BlockType Get(string name)
         {
             return blockTypes.ContainsKey(name) ? blockTypes[name] : null;
         }
 
-        protected override void LoadFile(string name)
+        public void Load(Dictionary<string, Vector2I> textureAtlasOffsets)
+        {
+            foreach (var file in Directory.GetFiles(directory))
+            {
+                if (Path.GetExtension(file) != extension)
+                {
+                    continue;
+                }
+
+                LoadFile(Path.GetFileNameWithoutExtension(file), textureAtlasOffsets);
+            }
+
+            loaded = true;
+        }
+
+        protected void LoadFile(string name, Dictionary<string, Vector2I> textureAtlasOffsets)
         {
             var deserializer = new DeserializerBuilder()
                 .Build();
@@ -71,5 +99,4 @@ namespace Aeon
             blockTypes.Add(name, blockType);
         }
     }
-
 }
