@@ -16,8 +16,12 @@ namespace Aeon
         private FastNoiseLite erosionNoise;
         [Export]
         private Curve erosionCurve;
+        [Export]
+        private FastNoiseLite caveNoise;
+        [Export]
+        private float caveNoiseThreshold = 0.5f;
 
-        public float GetHeight(Vector3I globalPosition, int waterLevel)
+        private float GetHeight(Vector3I globalPosition, int waterLevel)
         {
             float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
             float peaksAndValleys = (peaksAndValleysNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
@@ -29,6 +33,40 @@ namespace Aeon
             );
 
             return height;
+        }
+
+        public BlockType GetBlockType(Vector3I globalPosition, int waterLevel)
+        {
+            var height = GetHeight(globalPosition, waterLevel);
+
+            BlockType blockType = BlockTypes.Instance.Get("air");
+
+            if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
+            {
+                blockType = BlockTypes.Instance.Get("water");
+            }
+            else if (caveNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z) > caveNoiseThreshold)
+            {
+                blockType = BlockTypes.Instance.Get("air");
+            }
+            else if (globalPosition.Y < height - 2)
+            {
+                blockType = BlockTypes.Instance.Get("stone");
+            }
+            else if (height <= 68 && globalPosition.Y <= height)
+            {
+                blockType = BlockTypes.Instance.Get("sand");
+            }
+            else if (globalPosition.Y < height)
+            {
+                blockType = BlockTypes.Instance.Get("dirt");
+            }
+            else if (globalPosition.Y == height)
+            {
+                blockType = BlockTypes.Instance.Get("grass");
+            }
+
+            return blockType;
         }
     }
 }

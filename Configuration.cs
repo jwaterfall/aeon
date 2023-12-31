@@ -11,7 +11,7 @@ namespace Aeon
         public static readonly float GRAVITY = 30;
         public static readonly float JUMP_VELOCITY = 7.5f;
         public static readonly bool FLYING_ENABLED = true;
-        public static readonly int CHUNK_LOAD_RADIUS = 10;
+        public static readonly int CHUNK_LOAD_RADIUS = 6;
         public static readonly int MAX_STALE_CHUNKS = 100;
         public static readonly int TEXTURE_SIZE = 32;
     }
