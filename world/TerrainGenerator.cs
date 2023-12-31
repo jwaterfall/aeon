@@ -63,7 +63,14 @@ namespace Aeon
             }
             else if (globalPosition.Y == height)
             {
-                blockType = BlockTypes.Instance.Get("grass");
+                if (height > 100)
+                {
+                    blockType = BlockTypes.Instance.Get("snow");
+                }
+                else
+                {
+                    blockType = BlockTypes.Instance.Get("grass");
+                }
             }
 
             return blockType;
