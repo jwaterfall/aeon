@@ -11,16 +11,20 @@ config_version=5
 [application]
 
 config/name="Aeon"
-run/main_scene="res://world.tscn"
+run/main_scene="res://World.tscn"
 config/features=PackedStringArray("4.2", "C#", "Forward Plus")
 
 [autoload]
 
-TerrainGenerator="*res://world/terrainGenerator.tscn"
+TerrainGenerator="*res://world/TerrainGenerator.tscn"
 
 [dotnet]
 
 project/assembly_name="Aeon"
+
+[editor]
+
+naming/scene_name_casing=1
 
 [input]
 

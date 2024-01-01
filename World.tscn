@@ -1,8 +1,8 @@
 [gd_scene load_steps=6 format=3 uid="uid://bt8r1sncvbh6k"]
 
-[ext_resource type="Script" path="res://World.cs" id="1_4ocwg"]
-[ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://player.tscn" id="2_eji6k"]
-[ext_resource type="Script" path="res://world/ChunkManager.cs" id="3_a5p3c"]
+[ext_resource type="Script" path="res://World.cs" id="1_46msp"]
+[ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://Player.tscn" id="2_52x8a"]
+[ext_resource type="Script" path="res://world/ChunkManager.cs" id="3_kumx2"]
 
 [sub_resource type="Sky" id="Sky_f8ofp"]
 
@@ -12,20 +12,20 @@ background_color = Color(0.294118, 0.647059, 0.898039, 1)
 sky = SubResource("Sky_f8ofp")
 ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.1
+ambient_light_energy = 0.25
 ssao_enabled = true
 fog_light_color = Color(0.517647, 0.552941, 0.607843, 1)
 fog_light_energy = 0.6
 fog_sky_affect = 0.6
 
 [node name="World" type="Node3D"]
-script = ExtResource("1_4ocwg")
+script = ExtResource("1_46msp")
 
-[node name="Player" parent="." instance=ExtResource("2_eji6k")]
+[node name="Player" parent="." instance=ExtResource("2_52x8a")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 256, 16)
 
 [node name="ChunkManager" type="Node3D" parent="."]
-script = ExtResource("3_a5p3c")
+script = ExtResource("3_kumx2")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_p7a2h")
