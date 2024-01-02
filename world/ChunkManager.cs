@@ -2,16 +2,17 @@ using Godot;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Aeon
 {
     public partial class ChunkManager : Node3D
     {
         private PackedScene chunkScene = Godot.ResourceLoader.Load("res://world/chunk.tscn") as PackedScene;
-        private Dictionary<Vector2I, Chunk> chunks = new();
-        private List<Vector2I> chunksToGenerate = new();
-        private List<Vector2I> generatedChunks = new();
-        private List<Vector2I> chunksToRemove = new();
+        private ConcurrentDictionary<Vector2I, Chunk> chunks = new();
+        private ConcurrentQueue<Vector2I> chunksToGenerate = new();
+        private ConcurrentQueue<Vector2I> chunksToRender = new();
+        private ConcurrentQueue<Vector2I> chunksToRemove = new();
         private Task[] tasks = new Task[OS.GetProcessorCount() - 2];
         private Task renderTask;
         private Vector2I? lastPlayerChunkPosition;
@@ -37,7 +38,7 @@ namespace Aeon
             {
                 if (!nearbyChunkPositions.Contains(chunkPosition) && !chunksToRemove.Contains(chunkPosition))
                 {
-                    chunksToRemove.Add(chunkPosition);
+                    chunksToRemove.Enqueue(chunkPosition);
                 }
             }
 
@@ -45,7 +46,7 @@ namespace Aeon
             {
                 if (!chunks.ContainsKey(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
                 {
-                    chunksToGenerate.Add(chunkPosition);
+                    chunksToGenerate.Enqueue(chunkPosition);
                 }
             }
         }
@@ -57,17 +58,11 @@ namespace Aeon
                 Task task = tasks[i];
                 if (chunksToRemove.Count > 0 && (task == null || task.IsCompleted))
                 {
-                    var chunkPosition = chunksToRemove[0];
-                    chunksToRemove.RemoveAt(0);
+                    chunksToRemove.TryDequeue(out Vector2I chunkPosition);
 
                     tasks[i] = Task.Run(() => {
-                        lock (chunks) lock (generatedChunks)
-                            {
-                                generatedChunks.Remove(chunkPosition);
-                                var chunk = chunks[chunkPosition];
-                                chunks.Remove(chunkPosition);
-                                chunk.QueueFree();
-                            }
+                        chunks.Remove(chunkPosition, out Chunk chunk);
+                        chunk.QueueFree();
                     });
                 }
             }
@@ -82,26 +77,19 @@ namespace Aeon
                 Task task = tasks[i];
                 if (chunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
                 {
-                    var chunkPosition = chunksToGenerate[0];
-                    chunksToGenerate.RemoveAt(0);
+                    chunksToGenerate.TryDequeue(out Vector2I chunkPosition);
 
                     Chunk chunk = chunkScene.Instantiate<Chunk>();
                     chunk.SetChunkPosition(chunkPosition);
                     AddChild(chunk);
 
-                    lock (chunks)
-                    {
-                        chunks[chunkPosition] = chunk;
-                    }
+                    chunks[chunkPosition] = chunk;
 
                     tasks[i] = Task.Run(() =>
                     {
                         chunk.GenerateBlocks(terrainGenerator);
 
-                        lock (generatedChunks)
-                        {
-                            generatedChunks.Add(chunkPosition);
-                        }
+                        chunksToRender.Enqueue(chunkPosition);
                     });
                 }
             }
@@ -109,13 +97,20 @@ namespace Aeon
 
         private void RenderNextChunk()
         {
-            var chunksToRender = (from chunkPosition in generatedChunks
-                                  where CanRenderChunk(chunkPosition)
-                                  select chunkPosition).ToList();
-
             if (chunksToRender.Count > 0 && (renderTask == null || renderTask.IsCompleted))
             {
-                var chunkPosition = chunksToRender[0];
+                chunksToRender.TryDequeue(out Vector2I chunkPosition);
+
+                if (!chunks.ContainsKey(chunkPosition))
+                {
+                    return;
+                }
+
+                if (!CanRenderChunk(chunkPosition))
+                {
+                    chunksToRender.Enqueue(chunkPosition);
+                    return;
+                }
 
                 renderTask = Task.Run(() => {
                     if (!chunks.ContainsKey(chunkPosition))
@@ -135,15 +130,7 @@ namespace Aeon
                     var southChunk = chunks[southChunkPosition];
                     var westChunk = chunks[westChunkPosition];
 
-                    lock (chunk) lock (northChunk) lock (eastChunk) lock (southChunk) lock (westChunk)
-                                    {
-                                        chunk.Render(northChunk, eastChunk, southChunk, westChunk);
-                                    }
-
-                    lock (generatedChunks)
-                    {
-                        generatedChunks.Remove(chunkPosition);
-                    }
+                    chunk.Render(northChunk, eastChunk, southChunk, westChunk);
                 });
             }
         }
