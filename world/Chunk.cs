@@ -54,23 +54,20 @@ namespace Aeon
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator)
         {
-            lock (BlockTypes.Instance)
+            for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
-                for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+                for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
                 {
-                    for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
+                    for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                     {
-                        for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
-                        {
-                            var globalPosition = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
+                        var globalPosition = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
 
-                            int waterLevel = 64;
+                        int waterLevel = 64;
 
-                            var blockType = terrainGenerator.GetBlockType(globalPosition, waterLevel);
+                        var blockType = terrainGenerator.GetBlockType(globalPosition, waterLevel);
                             
-                            int index = GetFlatIndex(new Vector3I(x, y, z));
-                            chunkBlockTypes[index] = blockType;
-                        }
+                        int index = GetFlatIndex(new Vector3I(x, y, z));
+                        chunkBlockTypes[index] = blockType;
                     }
                 }
             }
