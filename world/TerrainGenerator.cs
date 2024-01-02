@@ -17,9 +17,15 @@ namespace Aeon
         [Export]
         private Curve erosionCurve;
         [Export]
-        private FastNoiseLite caveNoise;
+        private FastNoiseLite cheeseCaveNoise;
         [Export]
-        private float caveNoiseThreshold = 0.5f;
+        private float cheeseCaveNoiseThreshold = 0.6f;
+        [Export]
+        private FastNoiseLite noodleCaveNoise;
+        [Export]
+        private FastNoiseLite noodleCaveSecondaryNoise;
+        [Export]
+        private float noodleCaveNoiseThreshold = 0.05f;
 
         private float GetHeight(Vector3I globalPosition, int waterLevel)
         {
@@ -45,7 +51,7 @@ namespace Aeon
             {
                 blockType = BlockTypes.Instance.Get("water");
             }
-            else if (caveNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z) > caveNoiseThreshold)
+            else if (IsCave(globalPosition))
             {
                 blockType = BlockTypes.Instance.Get("air");
             }
@@ -74,6 +80,16 @@ namespace Aeon
             }
 
             return blockType;
+        }
+
+        public bool IsCave(Vector3I globalPosition)
+        {
+            var isNoodleCave = Mathf.Abs(noodleCaveNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z)) < noodleCaveNoiseThreshold &&
+                Mathf.Abs(noodleCaveSecondaryNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z)) < noodleCaveNoiseThreshold;
+
+            var isCheeseCave = cheeseCaveNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z) > cheeseCaveNoiseThreshold;
+
+            return isNoodleCave || isCheeseCave;
         }
     }
 }

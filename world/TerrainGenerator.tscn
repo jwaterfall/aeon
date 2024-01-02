@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://cifcreilnrjsb"]
+[gd_scene load_steps=11 format=3 uid="uid://cifcreilnrjsb"]
 
 [ext_resource type="Script" path="res://world/TerrainGenerator.cs" id="1_n5g71"]
 
@@ -26,8 +26,12 @@ frequency = 0.0001
 _data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.1, 0.6), 0.0, 0.0, 0, 0, Vector2(0.25, 0.5), 0.0, 0.0, 0, 0, Vector2(0.35, 0.6), 0.0, 0.0, 0, 0, Vector2(0.4, 0.2), 0.0, 0.0, 0, 0, Vector2(0.7, 0.15), 0.0, 0.0, 0, 0, Vector2(0.75, 0.5), 0.0, 0.0, 0, 0, Vector2(0.85, 0.5), 0.0, 0.0, 0, 0, Vector2(0.9, 0.15), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 10
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_g0jax"]
-noise_type = 0
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_a6l1i"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_bhih2"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_pbej0"]
+offset = Vector3(128, 128, 128)
 
 [node name="TerrainGenerator" type="Node3D"]
 script = ExtResource("1_n5g71")
@@ -37,4 +41,6 @@ peaksAndValleysNoise = SubResource("FastNoiseLite_xffit")
 peaksAndValleysCurve = SubResource("Curve_2fyb4")
 erosionNoise = SubResource("FastNoiseLite_uqb6v")
 erosionCurve = SubResource("Curve_jyapl")
-caveNoise = SubResource("FastNoiseLite_g0jax")
+cheeseCaveNoise = SubResource("FastNoiseLite_a6l1i")
+noodleCaveNoise = SubResource("FastNoiseLite_bhih2")
+noodleCaveSecondaryNoise = SubResource("FastNoiseLite_pbej0")
