@@ -9,13 +9,13 @@ namespace Aeon
     public partial class ChunkManager : Node3D
     {
         private PackedScene chunkScene = Godot.ResourceLoader.Load("res://world/chunk.tscn") as PackedScene;
-        private ConcurrentDictionary<Vector2I, Chunk> chunks = new();
-        private ConcurrentQueue<Vector2I> chunksToGenerate = new();
-        private ConcurrentQueue<Vector2I> chunksToRender = new();
-        private ConcurrentQueue<Vector2I> chunksToRemove = new();
+        private ConcurrentDictionary<Vector3I, Chunk> chunks = new();
+        private ConcurrentQueue<Vector3I> chunksToGenerate = new();
+        private ConcurrentQueue<Vector3I> chunksToRender = new();
+        private ConcurrentQueue<Vector3I> chunksToRemove = new();
         private Task[] tasks = new Task[OS.GetProcessorCount() - 2];
         private Task renderTask;
-        private Vector2I? lastPlayerChunkPosition;
+        private Vector3I? lastPlayerChunkPosition;
 
         public void Update(Vector3 playerPosition)
         {
@@ -58,7 +58,7 @@ namespace Aeon
                 Task task = tasks[i];
                 if (chunksToRemove.Count > 0 && (task == null || task.IsCompleted))
                 {
-                    chunksToRemove.TryDequeue(out Vector2I chunkPosition);
+                    chunksToRemove.TryDequeue(out Vector3I chunkPosition);
 
                     tasks[i] = Task.Run(() => {
                         chunks.Remove(chunkPosition, out Chunk chunk);
@@ -77,7 +77,7 @@ namespace Aeon
                 Task task = tasks[i];
                 if (chunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
                 {
-                    chunksToGenerate.TryDequeue(out Vector2I chunkPosition);
+                    chunksToGenerate.TryDequeue(out Vector3I chunkPosition);
 
                     Chunk chunk = chunkScene.Instantiate<Chunk>();
                     chunk.SetChunkPosition(chunkPosition);
@@ -99,7 +99,7 @@ namespace Aeon
         {
             if (chunksToRender.Count > 0 && (renderTask == null || renderTask.IsCompleted))
             {
-                chunksToRender.TryDequeue(out Vector2I chunkPosition);
+                chunksToRender.TryDequeue(out Vector3I chunkPosition);
 
                 if (!chunks.ContainsKey(chunkPosition))
                 {
@@ -120,27 +120,33 @@ namespace Aeon
 
                     var chunk = chunks[chunkPosition];
 
-                    var northChunkPosition = chunkPosition + Vector2I.Up;
-                    var eastChunkPosition = chunkPosition + Vector2I.Right;
-                    var southChunkPosition = chunkPosition + Vector2I.Down;
-                    var westChunkPosition = chunkPosition + Vector2I.Left;
+                    var northChunkPosition = chunkPosition + Vector3I.Forward;
+                    var eastChunkPosition = chunkPosition + Vector3I.Right;
+                    var southChunkPosition = chunkPosition + Vector3I.Back;
+                    var westChunkPosition = chunkPosition + Vector3I.Left;
+                    var upChunkPosition = chunkPosition + Vector3I.Up;
+                    var downChunkPosition = chunkPosition + Vector3I.Down;
 
                     var northChunk = chunks[northChunkPosition];
                     var eastChunk = chunks[eastChunkPosition];
                     var southChunk = chunks[southChunkPosition];
                     var westChunk = chunks[westChunkPosition];
+                    var upChunk = chunks[upChunkPosition];
+                    var downChunk = chunks[downChunkPosition];
 
-                    chunk.Render(northChunk, eastChunk, southChunk, westChunk);
+                    chunk.Render(northChunk, eastChunk, southChunk, westChunk, upChunk, downChunk);
                 });
             }
         }
 
-        private bool CanRenderChunk(Vector2I chunkPosition)
+        private bool CanRenderChunk(Vector3I chunkPosition)
         {
-            var northChunkPosition = chunkPosition + Vector2I.Up;
-            var eastChunkPosition = chunkPosition + Vector2I.Right;
-            var southChunkPosition = chunkPosition + Vector2I.Down;
-            var westChunkPosition = chunkPosition + Vector2I.Left;
+            var northChunkPosition = chunkPosition + Vector3I.Forward;
+            var eastChunkPosition = chunkPosition + Vector3I.Right;
+            var southChunkPosition = chunkPosition + Vector3I.Back;
+            var westChunkPosition = chunkPosition + Vector3I.Left;
+            var upChunkPosition = chunkPosition + Vector3I.Up;
+            var downChunkPosition = chunkPosition + Vector3I.Down;
 
             return
                 chunks.ContainsKey(chunkPosition) &&
@@ -152,10 +158,14 @@ namespace Aeon
                 chunks.ContainsKey(southChunkPosition) &&
                 chunks[southChunkPosition].generated &&
                 chunks.ContainsKey(westChunkPosition) &&
-                chunks[westChunkPosition].generated;
+                chunks[westChunkPosition].generated &&
+                chunks.ContainsKey(upChunkPosition) &&
+                chunks[upChunkPosition].generated &&
+                chunks.ContainsKey(downChunkPosition) &&
+                chunks[downChunkPosition].generated;
         }
 
-        private IEnumerable<Vector2I> GetNearbyChunkPositions(Vector2I playerChunkPosition)
+        private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)
         {
             var radius = Configuration.CHUNK_LOAD_RADIUS;
 
@@ -164,10 +174,13 @@ namespace Aeon
 
             for (int i = 0; i < Mathf.Pow((2 * radius + 1), 2); i++)
             {
-                var chunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Y);
-                if (((Vector2)playerChunkPosition).DistanceTo((Vector2)chunkPosition) <= radius)
+                for (int y = -radius; y <= radius; y++)
                 {
-                    yield return chunkPosition;
+                    var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Y);
+                    if (((Vector3)playerChunkPosition).DistanceTo((Vector3)chunkPosition) <= radius)
+                    {
+                        yield return chunkPosition;
+                    }
                 }
 
                 // If at a corner, change direction
@@ -184,10 +197,11 @@ namespace Aeon
             }
         }
 
-        private Vector2I WorldToChunkPosition(Vector3 worldPosition)
+        private Vector3I WorldToChunkPosition(Vector3 worldPosition)
         {
-            return new Vector2I(
+            return new Vector3I(
                 Mathf.FloorToInt(worldPosition.X / Configuration.CHUNK_DIMENSION.X),
+                Mathf.FloorToInt(worldPosition.Y / Configuration.CHUNK_DIMENSION.Y),
                 Mathf.FloorToInt(worldPosition.Z / Configuration.CHUNK_DIMENSION.Z)
             );
         }
