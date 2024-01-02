@@ -45,6 +45,11 @@ namespace Aeon
 
             meshInstance = new();
             AddChild(meshInstance);
+
+            if (Configuration.CHUNK_BORDERS)
+            {
+                CallDeferred("RenderDebug");
+            }
         }
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator)
@@ -211,6 +216,37 @@ namespace Aeon
         {
             chunkPosition = newChunkPosition;
             Position = new Vector3I(newChunkPosition.X, newChunkPosition.Y, newChunkPosition.Z) * Configuration.CHUNK_DIMENSION;
+        }
+        public void RenderDebug()
+        {
+            MeshInstance3D debugMeshInstance = new();
+            AddChild(debugMeshInstance);
+
+            ImmediateMesh debugMesh = new();
+            debugMeshInstance.Mesh = debugMesh;
+
+            debugMesh.SurfaceBegin(Mesh.PrimitiveType.Lines);
+
+            RenderDebugFace(Faces.TOP, debugMesh);
+            RenderDebugFace(Faces.BOTTOM, debugMesh);
+            RenderDebugFace(Faces.LEFT, debugMesh);
+            RenderDebugFace(Faces.RIGHT, debugMesh);
+            RenderDebugFace(Faces.FRONT, debugMesh);
+            RenderDebugFace(Faces.BACK, debugMesh);
+
+            debugMesh.SurfaceEnd();
+        }
+
+        public void RenderDebugFace(int[] face, ImmediateMesh debugMesh)
+        {
+            debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
+            debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
         }
     }
 }

@@ -58,6 +58,7 @@ namespace Aeon
         {
             Vector3 NewVelocity = Velocity;
             Node3D Head = GetNode<Node3D>("Head");
+            float speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
 
             if (Paused)
             {
@@ -79,11 +80,11 @@ namespace Aeon
 
                 if (verticalDirection.Length() != 0)
                 {
-                    NewVelocity.Y = verticalDirection.Y * Configuration.MOVEMENT_SPEED;
+                    NewVelocity.Y = verticalDirection.Y * speed;
                 }
                 else
                 {
-                    NewVelocity.Y = Mathf.MoveToward(Velocity.Y, 0, Configuration.MOVEMENT_SPEED);
+                    NewVelocity.Y = Mathf.MoveToward(Velocity.Y, 0, speed);
                 }
             }
             else
@@ -104,13 +105,13 @@ namespace Aeon
 
             if (Direction.Length() != 0)
             {
-                NewVelocity.X = Direction.X * Configuration.MOVEMENT_SPEED;
-                NewVelocity.Z = Direction.Z * Configuration.MOVEMENT_SPEED;
+                NewVelocity.X = Direction.X * speed;
+                NewVelocity.Z = Direction.Z * speed;
             }
             else
             {
-                NewVelocity.X = Mathf.MoveToward(Velocity.X, 0, Configuration.MOVEMENT_SPEED);
-                NewVelocity.Z = Mathf.MoveToward(Velocity.Z, 0, Configuration.MOVEMENT_SPEED);
+                NewVelocity.X = Mathf.MoveToward(Velocity.X, 0, speed);
+                NewVelocity.Z = Mathf.MoveToward(Velocity.Z, 0, speed);
             }
 
             Velocity = NewVelocity;
