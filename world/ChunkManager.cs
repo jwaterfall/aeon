@@ -176,7 +176,7 @@ namespace Aeon
             {
                 for (int y = -radius; y <= radius; y++)
                 {
-                    var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Y);
+                    var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
                     if (((Vector3)playerChunkPosition).DistanceTo((Vector3)chunkPosition) <= radius)
                     {
                         yield return chunkPosition;
