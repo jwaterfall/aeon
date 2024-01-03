@@ -7,6 +7,7 @@ namespace Aeon
         public override void _Ready()
         {
             BlockTypes.Instance.Load(BlockTextures.Instance.Load());
+            WorldPresets.Instance.Load();
         }
 
         public override void _Process(double delta)

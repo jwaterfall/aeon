@@ -1,0 +1,8 @@
+Transparent: false
+Textures:
+  Top: gold_ore
+  Bottom: gold_ore
+  Left: gold_ore
+  Right: gold_ore
+  Front: gold_ore
+  Back: gold_ore

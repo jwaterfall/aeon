@@ -1,0 +1,8 @@
+Transparent: false
+Textures:
+  Top: diamond_ore
+  Bottom: diamond_ore
+  Left: diamond_ore
+  Right: diamond_ore
+  Front: diamond_ore
+  Back: diamond_ore
