@@ -87,7 +87,7 @@ namespace Aeon
 
                     tasks[i] = Task.Run(() =>
                     {
-                        chunk.GenerateBlocks(terrainGenerator);
+                        chunk.GenerateBlocks(terrainGenerator, WorldPresets.Instance.Get("default"));
 
                         chunksToRender.Enqueue(chunkPosition);
                     });
