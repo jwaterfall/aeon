@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 
 namespace Aeon
 {
@@ -52,7 +53,7 @@ namespace Aeon
             }
         }
 
-        public void GenerateBlocks(TerrainGenerator terrainGenerator)
+        public void GenerateBlocks(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
         {
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
@@ -66,13 +67,84 @@ namespace Aeon
 
                         var blockType = terrainGenerator.GetBlockType(globalPosition, waterLevel);
                             
-                        int index = GetFlatIndex(new Vector3I(x, y, z));
-                        chunkBlockTypes[index] = blockType;
+                        SetBlock(new Vector3I(x, y, z), blockType);
+                    }
+                }
+            }
+
+            var random = new Random();
+
+            foreach (var ore in worldPreset.Ores)
+            {
+                // Respect max height and add size
+                // Block, Size, Frequency, MinHeight, MaxHeight
+                for (int i = 0; i < ore.Frequency; i++)
+                {
+                    var localStartPosition = new Vector3I(
+                        random.Next(0, Configuration.CHUNK_DIMENSION.X),
+                        random.Next(0, Configuration.CHUNK_DIMENSION.Y),
+                        random.Next(0, Configuration.CHUNK_DIMENSION.Z)
+                    );
+
+                    var globalStartPosition = GetGlobalPosition(localStartPosition);
+
+                    if (globalStartPosition.Y < ore.MinHeight || globalStartPosition.Y > ore.MaxHeight) continue;
+
+                    var veinPositions = new List<Vector3I>();
+
+                    for (int j = 0; j < ore.Size; j++)
+                    {
+                        // Calculate new offsets relative to the previous position
+                        var xOffset = random.Next(-1, 2); // -1, 0, or 1
+                        var yOffset = random.Next(-1, 2);
+                        var zOffset = random.Next(-1, 2);
+
+                        var previousPosition = (j > 0) ? veinPositions[j - 1] : localStartPosition;
+
+                        var localPosition = new Vector3I(
+                            previousPosition.X + xOffset,
+                            previousPosition.Y + yOffset,
+                            previousPosition.Z + zOffset
+                        );
+
+                        veinPositions.Add(localPosition);
+
+                        if (!IsInChunk(localPosition)) continue;
+
+                        SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), BlockTypes.Instance.Get("stone"));
                     }
                 }
             }
 
             generated = true;
+        }
+
+        private bool IsInChunk(Vector3I localPosition)
+        {
+            return
+                localPosition.X >= 0 &&
+                localPosition.X < Configuration.CHUNK_DIMENSION.X &&
+                localPosition.Y >= 0 &&
+                localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
+                localPosition.Z >= 0 &&
+                localPosition.Z < Configuration.CHUNK_DIMENSION.Z;
+        }
+
+        private Vector3I GetGlobalPosition(Vector3I localPosition)
+        {
+            return new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
+        }
+
+        private void SetBlock(Vector3I localPosition, BlockType blockType, BlockType replaces = null)
+        {
+            if (replaces != null)
+            {
+                var currentBlockType = chunkBlockTypes[GetFlatIndex(localPosition)];
+                if (currentBlockType != replaces) return;
+            }
+
+            int index = GetFlatIndex(localPosition);
+            chunkBlockTypes[index] = blockType;
         }
 
         private int GetFlatIndex(Vector3I localPosition)

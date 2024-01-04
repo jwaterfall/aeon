@@ -1,0 +1,21 @@
+Ores:
+  - Block: coal_ore
+    Size: 16
+    Frequency: 20
+    MinHeight: 0
+    MaxHeight: 128
+  - Block: iron_ore
+    Size: 8
+    Frequency: 20
+    MinHeight: 0
+    MaxHeight: 64
+  - Block: gold_ore
+    Size: 4
+    Frequency: 8
+    MinHeight: 0
+    MaxHeight: 32
+  - Block: diamond_ore
+    Size: 4
+    Frequency: 2
+    MinHeight: -16
+    MaxHeight: 16
