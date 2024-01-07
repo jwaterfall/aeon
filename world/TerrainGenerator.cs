@@ -27,7 +27,7 @@ namespace Aeon
         [Export]
         private float noodleCaveNoiseThreshold = 0.05f;
 
-        private float GetHeight(Vector3I globalPosition, int waterLevel)
+        private float GetHeight(Vector3I globalPosition)
         {
             float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
             float peaksAndValleys = (peaksAndValleysNoise.GetNoise2D(globalPosition.X, globalPosition.Z) + 1) / 2;
@@ -43,7 +43,7 @@ namespace Aeon
 
         public BlockType GetBlockType(Vector3I globalPosition, int waterLevel)
         {
-            var height = GetHeight(globalPosition, waterLevel);
+            var height = GetHeight(globalPosition);
 
             BlockType blockType = BlockTypes.Instance.Get("air");
 
