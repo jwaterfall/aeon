@@ -29,10 +29,15 @@ namespace Aeon
         };
 
         private SurfaceTool surfaceTool = new SurfaceTool();
+        private SurfaceTool transparentSurfaceTool = new SurfaceTool();
         private Mesh mesh;
         private MeshInstance3D meshInstance;
         private ConcavePolygonShape3D collisionShape;
         private CollisionShape3D collisionShapeNode;
+        private Mesh transparentMesh;
+        private MeshInstance3D transparentMeshInstance;
+        private ConcavePolygonShape3D transparentCollisionShape;
+        private CollisionShape3D transparentCollisionShapeNode;
         public Vector3I chunkPosition;
         public bool generated = false;
         public bool rendered = false;
@@ -46,6 +51,12 @@ namespace Aeon
 
             meshInstance = new();
             AddChild(meshInstance);
+
+            transparentCollisionShapeNode = new();
+            AddChild(transparentCollisionShapeNode);
+
+            transparentMeshInstance = new();
+            AddChild(transparentMeshInstance);
 
             if (Configuration.CHUNK_BORDERS)
             {
@@ -66,7 +77,7 @@ namespace Aeon
                         int waterLevel = 64;
 
                         var blockType = terrainGenerator.GetBlockType(globalPosition, waterLevel);
-                            
+
                         SetBlock(new Vector3I(x, y, z), blockType);
                     }
                 }
@@ -157,6 +168,9 @@ namespace Aeon
             surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             surfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
+            transparentSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+            transparentSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
+
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
                 for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
@@ -172,6 +186,10 @@ namespace Aeon
             mesh = surfaceTool.Commit();
             collisionShape = mesh.CreateTrimeshShape();
 
+            transparentSurfaceTool.GenerateNormals(false);
+            transparentMesh = transparentSurfaceTool.Commit();
+            transparentCollisionShape = transparentMesh.CreateTrimeshShape();
+
             CallThreadSafe("AfterRender");
         }
 
@@ -180,6 +198,11 @@ namespace Aeon
             meshInstance.MaterialOverride = BlockTextures.Instance.material;
             meshInstance.Mesh = mesh;
             collisionShapeNode.Shape = collisionShape;
+
+            transparentMeshInstance.MaterialOverride = BlockTextures.Instance.transparentMaterial;
+            transparentMeshInstance.Mesh = transparentMesh;
+            transparentCollisionShapeNode.Shape = transparentCollisionShape;
+
             rendered = true;
         }
 
@@ -223,7 +246,7 @@ namespace Aeon
 
             // Check in the current chunk
             BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
-            return !blockType.Solid && blockType != sourceBlockType;
+            return blockType.Transparent && blockType != sourceBlockType;
         }
 
         private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
@@ -237,31 +260,31 @@ namespace Aeon
 
             if (CheckTransparent(localPosition + Vector3I.Up, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop);
+                RenderFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop, blockType.Transparent);
             }
             if (CheckTransparent(localPosition + Vector3I.Down, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom);
+                RenderFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom, blockType.Transparent);
             }
             if (CheckTransparent(localPosition + Vector3I.Left, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft);
+                RenderFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft, blockType.Transparent);
             }
             if (CheckTransparent(localPosition + Vector3I.Right, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight);
+                RenderFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight, blockType.Transparent);
             }
             if (CheckTransparent(localPosition + Vector3I.Forward, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack);
+                RenderFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack, blockType.Transparent);
             }
             if (CheckTransparent(localPosition + Vector3I.Back, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
             {
-                RenderFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront);
+                RenderFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront, blockType.Transparent);
             }
         }
 
-        private void RenderFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset)
+        private void RenderFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset, bool transparent = false)
         {
             Vector3 a = vertices[face[0]] + localPosition;
             Vector3 b = vertices[face[1]] + localPosition;
@@ -277,8 +300,10 @@ namespace Aeon
             Vector2 uvc = uvOffset + new Vector2(width, height);
             Vector2 uvd = uvOffset + new Vector2(width, 0);
 
-            surfaceTool.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
-            surfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+            var st = transparent ? transparentSurfaceTool : surfaceTool;
+
+            st.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
+            st.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
         }
 
         public void SetChunkPosition(Vector3I newChunkPosition)

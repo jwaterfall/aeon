@@ -11,6 +11,7 @@ namespace Aeon
         public bool loaded = false;
         public Vector2I size;
         public StandardMaterial3D material = new();
+        public StandardMaterial3D transparentMaterial = new();
         private Dictionary<string, Image> textures = new();
         private Dictionary<string, Vector2I> offsets = new();
         private readonly int textureSize;
@@ -63,6 +64,10 @@ namespace Aeon
 
             material.AlbedoTexture = textureAtlasTexture;
             material.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
+
+            transparentMaterial.AlbedoTexture = textureAtlasTexture;
+            transparentMaterial.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
+            transparentMaterial.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
 
             loaded = true;
 

@@ -7,7 +7,7 @@ using YamlDotNet.Serialization;
 public class BlockType
 {
     public string Name;
-    public bool Solid;
+    public bool Transparent;
     public Vector2 TextureAtlasOffsetTop;
     public Vector2 TextureAtlasOffsetBottom;
     public Vector2 TextureAtlasOffsetLeft;
@@ -88,7 +88,7 @@ namespace Aeon
             var blockType = new BlockType
             {
                 Name = name,
-                Solid = !data.Transparent,
+                Transparent = data.Transparent,
                 TextureAtlasOffsetTop = textureAtlasOffsets[data.Textures.Top],
                 TextureAtlasOffsetBottom = textureAtlasOffsets[data.Textures.Bottom],
                 TextureAtlasOffsetLeft = textureAtlasOffsets[data.Textures.Left],
