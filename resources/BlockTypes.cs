@@ -49,7 +49,7 @@ namespace Aeon
             {
                 if (_instance == null)
                 {
-                    _instance = new BlockTypes();
+                    _instance = new();
                 }
                 return _instance;
             }

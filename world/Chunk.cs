@@ -29,15 +29,17 @@ namespace Aeon
         };
 
         private SurfaceTool surfaceTool = new SurfaceTool();
-        private SurfaceTool transparentSurfaceTool = new SurfaceTool();
         private Mesh mesh;
         private MeshInstance3D meshInstance;
         private ConcavePolygonShape3D collisionShape;
         private CollisionShape3D collisionShapeNode;
+
+        private SurfaceTool transparentSurfaceTool = new SurfaceTool();
         private Mesh transparentMesh;
         private MeshInstance3D transparentMeshInstance;
         private ConcavePolygonShape3D transparentCollisionShape;
         private CollisionShape3D transparentCollisionShapeNode;
+
         public Vector3I chunkPosition;
         public bool generated = false;
         public bool rendered = false;
@@ -341,6 +343,18 @@ namespace Aeon
             debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
             debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
             debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
+        }
+
+        public void BreakBlock(Vector3I localPosition)
+        {
+            GD.Print("Break block at " + localPosition + " in chunk " + chunkPosition);
+            SetBlock(localPosition, BlockTypes.Instance.Get("air"));
+        }
+
+        public void PlaceBlock(Vector3I localPosition, BlockType blockType)
+        {
+            GD.Print("Place block at " + localPosition + " in chunk " + chunkPosition);
+            SetBlock(localPosition, blockType);
         }
     }
 }

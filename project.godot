@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.2", "C#", "Forward Plus")
 [autoload]
 
 TerrainGenerator="*res://world/TerrainGenerator.tscn"
+CustomSignals="*res://CustomSignals.cs"
 
 [dotnet]
 

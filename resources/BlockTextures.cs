@@ -10,7 +10,7 @@ namespace Aeon
             {
                 if (_instance == null)
                 {
-                    _instance = new BlockTextures();
+                    _instance = new();
                 }
                 return _instance;
             }

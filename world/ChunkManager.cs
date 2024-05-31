@@ -11,11 +11,17 @@ namespace Aeon
         private PackedScene chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
         private ConcurrentDictionary<Vector3I, Chunk> chunks = new();
         private ConcurrentQueue<Vector3I> chunksToGenerate = new();
-        private ConcurrentQueue<Vector3I> chunksToRemove = new();
         private HashSet<Vector3I> loadedChunks = new();
         private Task[] tasks = new Task[OS.GetProcessorCount() - 2];
         private Task renderTask;
         private Vector3I? lastPlayerChunkPosition;
+
+        public override void _Ready()
+        {
+            var customSignals = GetNode<CustomSignals>("/root/CustomSignals");
+            customSignals.BreakBlock += BreakBlock;
+            customSignals.PlaceBlock += PlaceBlock;
+        }
 
         public void Update(Vector3 playerPosition)
         {
@@ -27,55 +33,32 @@ namespace Aeon
                 .Select(chunk => chunk.chunkPosition)
                 .ToList();
 
-            RemoveChunks();
             GenerateChunks();
             RenderChunks(chunksToRender);
 
             if (lastPlayerChunkPosition != playerChunkPosition)
             {
                 lastPlayerChunkPosition = playerChunkPosition;
-                UpdateLoadedChunks(playerChunkPosition);
-            }
-        }
 
-        private void UpdateLoadedChunks(Vector3I playerChunkPosition)
-        {
-            HashSet<Vector3I> nearbyChunkPositions = new (GetNearbyChunkPositions(playerChunkPosition));
+                HashSet<Vector3I> nearbyChunkPositions = new(GetNearbyChunkPositions(playerChunkPosition));
 
-            // Remove chunks that are no longer nearby
-            foreach (var chunkPosition in loadedChunks.Except(nearbyChunkPositions).ToList())
-            {
-                if (!chunksToRemove.Contains(chunkPosition))
+                // Remove chunks that are no longer nearby
+                foreach (var chunkPosition in loadedChunks.Except(nearbyChunkPositions))
                 {
-                    chunksToRemove.Enqueue(chunkPosition);
+                    chunks.Remove(chunkPosition, out Chunk chunk);
                     loadedChunks.Remove(chunkPosition);
+                    chunk.QueueFree();
+                    GD.Print("Removed chunk at " + chunkPosition);
                 }
-            }
 
-            // Add chunks that are now nearby
-            foreach (var chunkPosition in nearbyChunkPositions.Except(loadedChunks))
-            {
-                if (!chunks.ContainsKey(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
+                // Add chunks that are now nearby
+                foreach (var chunkPosition in nearbyChunkPositions.Except(loadedChunks))
                 {
-                    chunksToGenerate.Enqueue(chunkPosition);
-                    loadedChunks.Add(chunkPosition);
-                }
-            }
-        }
-
-        private void RemoveChunks()
-        {
-            for (int i = 0; i < tasks.Length; i++)
-            {
-                Task task = tasks[i];
-                if (chunksToRemove.Count > 0 && (task == null || task.IsCompleted))
-                {
-                    chunksToRemove.TryDequeue(out Vector3I chunkPosition);
-
-                    tasks[i] = Task.Run(() => {
-                        chunks.Remove(chunkPosition, out Chunk chunk);
-                        chunk.QueueFree();
-                    });
+                    if (!chunks.ContainsKey(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
+                    {
+                        chunksToGenerate.Enqueue(chunkPosition);
+                        loadedChunks.Add(chunkPosition);
+                    }
                 }
             }
         }
@@ -115,31 +98,31 @@ namespace Aeon
                 var chunkPosition = chunksToRender[0];
                 chunksToRender.RemoveAt(0);
 
-                renderTask = Task.Run(() =>
-                {
-                    if (!chunks.ContainsKey(chunkPosition)) return;
-
-                    var chunk = chunks[chunkPosition];
-
-                    if (!chunk.generated || chunk.rendered) return;
-
-                    var northChunkPosition = chunkPosition + Vector3I.Forward;
-                    var eastChunkPosition = chunkPosition + Vector3I.Right;
-                    var southChunkPosition = chunkPosition + Vector3I.Back;
-                    var westChunkPosition = chunkPosition + Vector3I.Left;
-                    var upChunkPosition = chunkPosition + Vector3I.Up;
-                    var downChunkPosition = chunkPosition + Vector3I.Down;
-
-                    var northChunk = chunks[northChunkPosition];
-                    var eastChunk = chunks[eastChunkPosition];
-                    var southChunk = chunks[southChunkPosition];
-                    var westChunk = chunks[westChunkPosition];
-                    var upChunk = chunks[upChunkPosition];
-                    var downChunk = chunks[downChunkPosition];
-
-                    chunk.Render(northChunk, eastChunk, southChunk, westChunk, upChunk, downChunk);
+                renderTask = Task.Run(() => {
+                    RenderChunk(chunkPosition);
                 });
             }
+        }
+
+        private void RenderChunk(Vector3I chunkPosition)
+        {
+            var chunk = chunks[chunkPosition];
+
+            var northChunkPosition = chunkPosition + Vector3I.Forward;
+            var eastChunkPosition = chunkPosition + Vector3I.Right;
+            var southChunkPosition = chunkPosition + Vector3I.Back;
+            var westChunkPosition = chunkPosition + Vector3I.Left;
+            var upChunkPosition = chunkPosition + Vector3I.Up;
+            var downChunkPosition = chunkPosition + Vector3I.Down;
+
+            var northChunk = chunks[northChunkPosition];
+            var eastChunk = chunks[eastChunkPosition];
+            var southChunk = chunks[southChunkPosition];
+            var westChunk = chunks[westChunkPosition];
+            var upChunk = chunks[upChunkPosition];
+            var downChunk = chunks[downChunkPosition];
+
+            chunk.Render(northChunk, eastChunk, southChunk, westChunk, upChunk, downChunk);
         }
 
         private bool CanRenderChunk(Vector3I chunkPosition)
@@ -207,6 +190,83 @@ namespace Aeon
                 Mathf.FloorToInt(worldPosition.Y / Configuration.CHUNK_DIMENSION.Y),
                 Mathf.FloorToInt(worldPosition.Z / Configuration.CHUNK_DIMENSION.Z)
             );
+        }
+
+        private Vector3I WorldToLocalPosition(Vector3 worldPosition)
+        {
+            int x = (int)((worldPosition.X % Configuration.CHUNK_DIMENSION.X + Configuration.CHUNK_DIMENSION.X) % Configuration.CHUNK_DIMENSION.X);
+            int y = (int)((worldPosition.Y % Configuration.CHUNK_DIMENSION.Y + Configuration.CHUNK_DIMENSION.Y) % Configuration.CHUNK_DIMENSION.Y);
+            int z = (int)((worldPosition.Z % Configuration.CHUNK_DIMENSION.Z + Configuration.CHUNK_DIMENSION.Z) % Configuration.CHUNK_DIMENSION.Z);
+
+            return new Vector3I(x, y, z);
+        }
+
+        private void BreakBlock(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            chunks[chunkPosition].BreakBlock(localPosition);
+            RenderChunk(chunkPosition);
+
+            if (localPosition.X < 1)
+            {
+                RenderChunk(chunkPosition + Vector3I.Left);
+            }
+            else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
+            {
+                RenderChunk(chunkPosition + Vector3I.Right);
+            }
+            if (localPosition.Y < 1)
+            {
+               RenderChunk(chunkPosition + Vector3I.Down);
+            }
+            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2)
+            {
+               RenderChunk(chunkPosition + Vector3I.Up);
+            }
+            if (localPosition.Z < 1)
+            {
+                RenderChunk(chunkPosition + Vector3I.Back);
+            }
+            else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
+            {
+                RenderChunk(chunkPosition + Vector3I.Forward);
+            }
+        }
+
+        private void PlaceBlock(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone"));
+            RenderChunk(chunkPosition);
+
+            if (localPosition.X < 1)
+            {
+                RenderChunk(chunkPosition + Vector3I.Left);
+            }
+            else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
+            {
+                RenderChunk(chunkPosition + Vector3I.Right);
+            }
+            if (localPosition.Y < 1)
+            {
+                RenderChunk(chunkPosition + Vector3I.Down);
+            }
+            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2)
+            {
+                RenderChunk(chunkPosition + Vector3I.Up);
+            }
+            if (localPosition.Z < 1)
+            {
+                RenderChunk(chunkPosition + Vector3I.Back);
+            }
+            else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
+            {
+                RenderChunk(chunkPosition + Vector3I.Forward);
+            }
         }
     }
 

@@ -56,8 +56,8 @@ namespace Aeon
 
         public override void _PhysicsProcess(double delta)
         {
-            Vector3 NewVelocity = Velocity;
-            Node3D Head = GetNode<Node3D>("Head");
+            Vector3 newVelocity = Velocity;
+            Node3D head = GetNode<Node3D>("Head");
             float speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
 
             if (Paused)
@@ -80,43 +80,72 @@ namespace Aeon
 
                 if (verticalDirection.Length() != 0)
                 {
-                    NewVelocity.Y = verticalDirection.Y * speed;
+                    newVelocity.Y = verticalDirection.Y * speed;
                 }
                 else
                 {
-                    NewVelocity.Y = Mathf.MoveToward(Velocity.Y, 0, speed);
+                    newVelocity.Y = Mathf.MoveToward(Velocity.Y, 0, speed);
                 }
             }
             else
             {
                 if (!IsOnFloor())
                 {
-                    NewVelocity.Y -= Configuration.GRAVITY * (float)delta;
+                    newVelocity.Y -= Configuration.GRAVITY * (float)delta;
                 }
                 else if (Input.IsActionJustPressed("Jump"))
                 {
-                    NewVelocity.Y = Configuration.JUMP_VELOCITY;
+                    newVelocity.Y = Configuration.JUMP_VELOCITY;
                 }
             }
 
-            Basis Basis = Head.GlobalTransform.Basis;
+            Basis Basis = head.GlobalTransform.Basis;
             Vector2 InputDirection = Input.GetVector("Left", "Right", "Forward", "Backward");
             Vector3 Direction = (Basis * new Vector3(InputDirection.X, 0, InputDirection.Y)).Normalized();
 
             if (Direction.Length() != 0)
             {
-                NewVelocity.X = Direction.X * speed;
-                NewVelocity.Z = Direction.Z * speed;
+                newVelocity.X = Direction.X * speed;
+                newVelocity.Z = Direction.Z * speed;
             }
             else
             {
-                NewVelocity.X = Mathf.MoveToward(Velocity.X, 0, speed);
-                NewVelocity.Z = Mathf.MoveToward(Velocity.Z, 0, speed);
+                newVelocity.X = Mathf.MoveToward(Velocity.X, 0, speed);
+                newVelocity.Z = Mathf.MoveToward(Velocity.Z, 0, speed);
             }
 
-            Velocity = NewVelocity;
+            Velocity = newVelocity;
 
             MoveAndSlide();
+
+            RayCast3D ray = GetNode<RayCast3D>("Head/Camera3D/RayCast3D");
+            Node3D blockOutline = GetNode<Node3D>("BlockOutline");
+
+            if (ray.IsColliding())
+            {
+                var normal = ray.GetCollisionNormal();
+                var position = ray.GetCollisionPoint() - normal * 0.5f;
+                var worldPosition = (Vector3I)(position.Floor());
+
+                blockOutline.GlobalPosition = worldPosition + (Vector3.One / 2);
+                blockOutline.GlobalRotation = Vector3.Zero;
+                blockOutline.Visible = true;
+
+                var customSignals = GetNode<CustomSignals>("/root/CustomSignals");
+
+                if (Input.IsActionJustPressed("Break"))
+                {
+                    customSignals.EmitSignal(nameof(CustomSignals.BreakBlock), worldPosition);
+                }
+                else if (Input.IsActionJustPressed("Place"))
+                {
+                    customSignals.EmitSignal(nameof(CustomSignals.PlaceBlock), worldPosition + normal);
+                }
+            }
+            else
+            {
+                blockOutline.Visible = false;
+            }
         }
     }
 }
