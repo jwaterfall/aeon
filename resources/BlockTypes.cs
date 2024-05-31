@@ -1,45 +1,70 @@
 using Godot;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+
+
+public enum Cullface
+{
+    None,
+    Down,
+    Up,
+    North,
+    South,
+    West,
+    East
+}
+
+public class Face
+{
+    public List<Vector3> Vertices;
+    public Vector2 TextureAtlasOffset;
+    public Cullface Cullface;
+    public List<float> UV;
+}
 
 public class BlockType
 {
     public string Name;
     public bool Transparent;
-    public Vector2 TextureAtlasOffsetTop;
-    public Vector2 TextureAtlasOffsetBottom;
-    public Vector2 TextureAtlasOffsetLeft;
-    public Vector2 TextureAtlasOffsetRight;
-    public Vector2 TextureAtlasOffsetFront;
-    public Vector2 TextureAtlasOffsetBack;
+    public List<Face> Faces;
 }
 
-public class RawBlockType
+public class RawBlock
 {
     public bool Transparent { get; set; }
-    public Textures Textures { get; set; }
+    public string Model { get; set; }
+    public Dictionary<string, string> Textures { get; set; }
 }
 
-public class Textures
+public class RawFace
 {
-    public string Top { get; set; }
-    public string Bottom { get; set; }
-    public string Left { get; set; }
-    public string Right { get; set; }
-    public string Front { get; set; }
-    public string Back { get; set; }
+    public List<List<float>> Vertices { get; set; }
+    public string Texture { get; set; }
+    [DefaultValue("none")]
+    public string Cullface { get; set; } = "none";
+    [DefaultValue(new int[] { 0, 0, 1, 1 })]
+    public List<float> Uv { get; set; } = new() { 0, 0, 1, 1 };
+}
+
+public class RawModel
+{
+    public List<RawFace> Faces { get; set; }
 }
 
 namespace Aeon
 {
     public class BlockTypes
     {
-        protected string directory = "data/blocks";
+        protected string blocksDirectory = "data/blocks";
+        protected string modelsDirectory = "data/models";
         protected string extension = ".yaml";
         public bool loaded = false;
-        public ConcurrentDictionary<string, BlockType> blockTypes = new();
+        public ConcurrentDictionary<string, BlockType> blockTypesMap = new();
 
         private static BlockTypes _instance;
 
@@ -55,49 +80,106 @@ namespace Aeon
             }
         }
 
-        private BlockTypes() {}
+        private BlockTypes() { }
 
         public BlockType Get(string name)
         {
-            return blockTypes.ContainsKey(name) ? blockTypes[name] : null;
+            return blockTypesMap.ContainsKey(name) ? blockTypesMap[name] : null;
         }
 
         public void Load(Dictionary<string, Vector2I> textureAtlasOffsets)
         {
-            foreach (var file in Directory.GetFiles(directory))
+            GD.Print("Loading Models");
+            var models = LoadModels();
+            GD.Print("Loading Blocks");
+            LoadBlocks(models, textureAtlasOffsets);
+            GD.Print("Finished Loading Blocks");
+            loaded = true;
+        }
+
+        protected Dictionary<string, RawModel> LoadModels()
+        {
+            Dictionary<string, RawModel> models = new();
+
+            foreach (var file in Directory.GetFiles(modelsDirectory))
             {
                 if (Path.GetExtension(file) != extension)
                 {
                     continue;
                 }
 
-                LoadFile(Path.GetFileNameWithoutExtension(file), textureAtlasOffsets);
+                var name = Path.GetFileNameWithoutExtension(file);
+                var model = LoadModelFile(name);
+                models.Add(name, model);
             }
 
-            loaded = true;
+            return models;
         }
 
-        protected void LoadFile(string name, Dictionary<string, Vector2I> textureAtlasOffsets)
+        protected RawModel LoadModelFile(string name)
         {
             var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var text = File.ReadAllText($"{directory}/{name}{extension}");
-            var data = deserializer.Deserialize<RawBlockType>(text);
+            var text = File.ReadAllText($"{modelsDirectory}/{name}{extension}");
+            var data = deserializer.Deserialize<RawModel>(text);
+
+            return data;
+        }
+
+        protected void LoadBlocks(Dictionary<string, RawModel> models, Dictionary<string, Vector2I> textureAtlasOffsets)
+        {
+            foreach (var file in Directory.GetFiles(blocksDirectory))
+            {
+                if (Path.GetExtension(file) != extension)
+                {
+                    continue;
+                }
+
+                LoadBlockFile(Path.GetFileNameWithoutExtension(file), models, textureAtlasOffsets);
+            }
+        }
+
+        protected void LoadBlockFile(string name, Dictionary<string, RawModel> models, Dictionary<string, Vector2I> textureAtlasOffsets)
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+
+            var text = File.ReadAllText($"{blocksDirectory}/{name}{extension}");
+            var data = deserializer.Deserialize<RawBlock>(text);
 
             var blockType = new BlockType
             {
                 Name = name,
                 Transparent = data.Transparent,
-                TextureAtlasOffsetTop = textureAtlasOffsets[data.Textures.Top],
-                TextureAtlasOffsetBottom = textureAtlasOffsets[data.Textures.Bottom],
-                TextureAtlasOffsetLeft = textureAtlasOffsets[data.Textures.Left],
-                TextureAtlasOffsetRight = textureAtlasOffsets[data.Textures.Right],
-                TextureAtlasOffsetFront = textureAtlasOffsets[data.Textures.Front],
-                TextureAtlasOffsetBack = textureAtlasOffsets[data.Textures.Back]
+                Faces = new List<Face>()
             };
 
-            blockTypes[name] = blockType;
+            var model = models[data.Model];
+
+            foreach (var face in model.Faces)
+            {
+                var texture = data.Textures[face.Texture];
+
+                if (textureAtlasOffsets.TryGetValue(texture, out Vector2I atlasOffset))
+                {
+                    blockType.Faces.Add(new Face
+                    {
+                        Vertices = face.Vertices.ConvertAll(v => new Vector3(v[0], v[1], v[2])),
+                        TextureAtlasOffset = atlasOffset,
+                        Cullface = (Cullface)Enum.Parse(typeof(Cullface), face.Cullface, true),
+                        UV = face.Uv
+                    });
+                }
+                else
+                {
+                    GD.Print($"Atlas offset not found for texture: {face.Texture}");
+                }
+            }
+
+            blockTypesMap[name] = blockType;
         }
     }
 }

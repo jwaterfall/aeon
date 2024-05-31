@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: coal_ore
-  Bottom: coal_ore
-  Left: coal_ore
-  Right: coal_ore
-  Front: coal_ore
-  Back: coal_ore
+transparent: false
+model: cube
+textures:
+  top: coal_ore
+  bottom: coal_ore
+  left: coal_ore
+  right: coal_ore
+  front: coal_ore
+  back: coal_ore

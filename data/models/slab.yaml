@@ -1,0 +1,46 @@
+faces:
+  - vertices:
+      - [0, 0.5, 0]
+      - [1, 0.5, 0]
+      - [1, 0.5, 1]
+      - [0, 0.5, 1]
+    texture: top
+  - vertices:
+      - [0, 0, 0]
+      - [0, 0, 1]
+      - [1, 0, 1]
+      - [1, 0, 0]
+    texture: bottom
+    cullface: down
+  - vertices:
+      - [0, 0.5, 1]
+      - [0, 0, 1]
+      - [0, 0, 0]
+      - [0, 0.5, 0]
+    texture: left
+    cullface: west
+    uv: [0, 0.5, 1, 1]
+  - vertices:
+      - [1, 0.5, 0]
+      - [1, 0, 0]
+      - [1, 0, 1]
+      - [1, 0.5, 1]
+    texture: right
+    cullface: east
+    uv: [0, 0.5, 1, 1]
+  - vertices:
+      - [1, 0.5, 1]
+      - [1, 0, 1]
+      - [0, 0, 1]
+      - [0, 0.5, 1]
+    texture: front
+    cullface: north
+    uv: [0, 0.5, 1, 1]
+  - vertices:
+      - [0, 0.5, 0]
+      - [0, 0, 0]
+      - [1, 0, 0]
+      - [1, 0.5, 0]
+    texture: back
+    cullface: south
+    uv: [0, 0.5, 1, 1]

@@ -1,5 +1,5 @@
-transparent: false
-model: cube
+transparent: true
+model: slab
 textures:
   top: stone
   bottom: stone

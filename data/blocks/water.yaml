@@ -1,8 +1,9 @@
-Transparent: true
-Textures:
-  Top: water
-  Bottom: water
-  Left: water
-  Right: water
-  Front: water
-  Back: water
+transparent: true
+model: cube
+textures:
+  top: water
+  bottom: water
+  left: water
+  right: water
+  front: water
+  back: water

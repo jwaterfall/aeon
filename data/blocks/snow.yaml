@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: snow_top
-  Bottom: dirt
-  Left: snow_side
-  Right: snow_side
-  Front: snow_side
-  Back: snow_side
+transparent: false
+model: cube
+textures:
+  top: snow_top
+  bottom: dirt
+  left: snow_side
+  right: snow_side
+  front: snow_side
+  back: snow_side

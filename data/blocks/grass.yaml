@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: grass_top
-  Bottom: dirt
-  Left: grass_side
-  Right: grass_side
-  Front: grass_side
-  Back: grass_side
+transparent: false
+model: cube
+textures:
+  top: grass_top
+  bottom: dirt
+  left: grass_side
+  right: grass_side
+  front: grass_side
+  back: grass_side

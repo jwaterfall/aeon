@@ -6,28 +6,6 @@ namespace Aeon
 {
     public partial class Chunk : StaticBody3D
     {
-        private static class Faces
-        {
-            public static readonly int[] TOP = new int[] { 2, 3, 7, 6 };
-            public static readonly int[] BOTTOM = new int[] { 0, 4, 5, 1 };
-            public static readonly int[] LEFT = new int[] { 6, 4, 0, 2 };
-            public static readonly int[] RIGHT = new int[] { 3, 1, 5, 7 };
-            public static readonly int[] FRONT = new int[] { 7, 5, 4, 6 };
-            public static readonly int[] BACK = new int[] { 2, 0, 1, 3 };
-        }
-
-        private static readonly Vector3I[] vertices = new Vector3I[]
-        {
-            new(0, 0, 0), // 0
-	        new(1, 0, 0), // 1
-	        new(0, 1, 0), // 2
-	        new(1, 1, 0), // 3
-	        new(0, 0, 1), // 4
-	        new(1, 0, 1), // 5
-	        new(0, 1, 1), // 6
-	        new(1, 1, 1)  // 7
-        };
-
         private SurfaceTool surfaceTool = new SurfaceTool();
         private Mesh mesh;
         private MeshInstance3D meshInstance;
@@ -219,7 +197,7 @@ namespace Aeon
             if (localPosition.X >= Configuration.CHUNK_DIMENSION.X)
             {
                 // Check if the block in the east neighboring chunk is transparent
-                return eastChunk.CheckTransparent(new Vector3I(0, localPosition.Y, localPosition.Z), sourceBlockType, null, null, null, null, null, null);
+                return southChunk.CheckTransparent(new Vector3I(0, localPosition.Y, localPosition.Z), sourceBlockType, null, null, null, null, null, null);
             }
 
             if (localPosition.Y < 0)
@@ -243,15 +221,16 @@ namespace Aeon
             if (localPosition.Z >= Configuration.CHUNK_DIMENSION.Z)
             {
                 // Check if the block in the south neighboring chunk is transparent
-                return southChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, 0), sourceBlockType, null, null, null, null, null, null);
+                return eastChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, 0), sourceBlockType, null, null, null, null, null, null);
             }
 
             // Check in the current chunk
             BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
-            return blockType.Transparent && blockType != sourceBlockType;
+            return blockType.Transparent 
+                //&& blockType != sourceBlockType;
         }
 
-        private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
+        private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk eastChunk, Chunk southChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
         {
             BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
 
@@ -260,47 +239,47 @@ namespace Aeon
                 return;
             }
 
-            if (CheckTransparent(localPosition + Vector3I.Up, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
+            for (int i = 0; i < blockType.Faces.Count; i++)
             {
-                RenderFace(Faces.TOP, localPosition, blockType.TextureAtlasOffsetTop, blockType.Transparent);
-            }
-            if (CheckTransparent(localPosition + Vector3I.Down, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
-            {
-                RenderFace(Faces.BOTTOM, localPosition, blockType.TextureAtlasOffsetBottom, blockType.Transparent);
-            }
-            if (CheckTransparent(localPosition + Vector3I.Left, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
-            {
-                RenderFace(Faces.LEFT, localPosition, blockType.TextureAtlasOffsetLeft, blockType.Transparent);
-            }
-            if (CheckTransparent(localPosition + Vector3I.Right, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
-            {
-                RenderFace(Faces.RIGHT, localPosition, blockType.TextureAtlasOffsetRight, blockType.Transparent);
-            }
-            if (CheckTransparent(localPosition + Vector3I.Forward, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
-            {
-                RenderFace(Faces.BACK, localPosition, blockType.TextureAtlasOffsetBack, blockType.Transparent);
-            }
-            if (CheckTransparent(localPosition + Vector3I.Back, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
-            {
-                RenderFace(Faces.FRONT, localPosition, blockType.TextureAtlasOffsetFront, blockType.Transparent);
+                var face = blockType.Faces[i];
+
+                Dictionary<Cullface, Vector3I> faceDirections = new()
+                {
+                    { Cullface.Up, Vector3I.Up },
+                    { Cullface.Down, Vector3I.Down },
+                    { Cullface.North, Vector3I.Back },
+                    { Cullface.South, Vector3I.Forward },
+                    { Cullface.West, Vector3I.Left },
+                    { Cullface.East, Vector3I.Right }
+                };
+                
+                if (face.Cullface != Cullface.None)
+                {
+                    if (!CheckTransparent(localPosition + faceDirections[face.Cullface], blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
+                    {
+                        continue;
+                    }
+                }
+
+                RenderFace(face, localPosition, blockType.Transparent);
             }
         }
 
-        private void RenderFace(int[] face, Vector3I localPosition, Vector2 textureAtlasOffset, bool transparent = false)
+        private void RenderFace(Face face, Vector3I localPosition, bool transparent = false)
         {
-            Vector3 a = vertices[face[0]] + localPosition;
-            Vector3 b = vertices[face[1]] + localPosition;
-            Vector3 c = vertices[face[2]] + localPosition;
-            Vector3 d = vertices[face[3]] + localPosition;
+            Vector3 a = face.Vertices[0] + localPosition;
+            Vector3 b = face.Vertices[1] + localPosition;
+            Vector3 c = face.Vertices[2] + localPosition;
+            Vector3 d = face.Vertices[3] + localPosition;
 
-            Vector2 uvOffset = textureAtlasOffset / BlockTextures.Instance.size;
+            Vector2 uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
             float height = 1.0f / BlockTextures.Instance.size.Y;
             float width = 1.0f / BlockTextures.Instance.size.X;
 
-            Vector2 uva = uvOffset + new Vector2(0, 0);
-            Vector2 uvb = uvOffset + new Vector2(0, height);
-            Vector2 uvc = uvOffset + new Vector2(width, height);
-            Vector2 uvd = uvOffset + new Vector2(width, 0);
+            Vector2 uva = uvOffset + new Vector2(face.UV[0] * width, face.UV[1] * height);
+            Vector2 uvb = uvOffset + new Vector2(face.UV[0] * width, face.UV[3] * height);
+            Vector2 uvc = uvOffset + new Vector2(face.UV[2] * width, face.UV[3] * height);
+            Vector2 uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
 
             var st = transparent ? transparentSurfaceTool : surfaceTool;
 
@@ -315,45 +294,43 @@ namespace Aeon
         }
         public void RenderDebug()
         {
-            MeshInstance3D debugMeshInstance = new();
-            AddChild(debugMeshInstance);
+            //MeshInstance3D debugMeshInstance = new();
+            //AddChild(debugMeshInstance);
 
-            ImmediateMesh debugMesh = new();
-            debugMeshInstance.Mesh = debugMesh;
+            //ImmediateMesh debugMesh = new();
+            //debugMeshInstance.Mesh = debugMesh;
 
-            debugMesh.SurfaceBegin(Mesh.PrimitiveType.Lines);
+            //debugMesh.SurfaceBegin(Mesh.PrimitiveType.Lines);
 
-            RenderDebugFace(Faces.TOP, debugMesh);
-            RenderDebugFace(Faces.BOTTOM, debugMesh);
-            RenderDebugFace(Faces.LEFT, debugMesh);
-            RenderDebugFace(Faces.RIGHT, debugMesh);
-            RenderDebugFace(Faces.FRONT, debugMesh);
-            RenderDebugFace(Faces.BACK, debugMesh);
+            //RenderDebugFace(Faces.TOP, debugMesh);
+            //RenderDebugFace(Faces.BOTTOM, debugMesh);
+            //RenderDebugFace(Faces.LEFT, debugMesh);
+            //RenderDebugFace(Faces.RIGHT, debugMesh);
+            //RenderDebugFace(Faces.FRONT, debugMesh);
+            //RenderDebugFace(Faces.BACK, debugMesh);
 
-            debugMesh.SurfaceEnd();
+            //debugMesh.SurfaceEnd();
         }
 
-        public void RenderDebugFace(int[] face, ImmediateMesh debugMesh)
-        {
-            debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
-            debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
-        }
+        //public void RenderDebugFace(int[] face, ImmediateMesh debugMesh)
+        //{
+        //    debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
+        //    debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
+        //}
 
         public void BreakBlock(Vector3I localPosition)
         {
-            GD.Print("Break block at " + localPosition + " in chunk " + chunkPosition);
             SetBlock(localPosition, BlockTypes.Instance.Get("air"));
         }
 
         public void PlaceBlock(Vector3I localPosition, BlockType blockType)
         {
-            GD.Print("Place block at " + localPosition + " in chunk " + chunkPosition);
             SetBlock(localPosition, blockType);
         }
     }

@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: sand
-  Bottom: sand
-  Left: sand
-  Right: sand
-  Front: sand
-  Back: sand
+transparent: false
+model: cube
+textures:
+  top: sand
+  bottom: sand
+  left: sand
+  right: sand
+  front: sand
+  back: sand

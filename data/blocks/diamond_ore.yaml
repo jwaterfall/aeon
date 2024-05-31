@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: diamond_ore
-  Bottom: diamond_ore
-  Left: diamond_ore
-  Right: diamond_ore
-  Front: diamond_ore
-  Back: diamond_ore
+transparent: false
+model: cube
+textures:
+  top: diamond_ore
+  bottom: diamond_ore
+  left: diamond_ore
+  right: diamond_ore
+  front: diamond_ore
+  back: diamond_ore

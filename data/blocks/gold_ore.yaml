@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: gold_ore
-  Bottom: gold_ore
-  Left: gold_ore
-  Right: gold_ore
-  Front: gold_ore
-  Back: gold_ore
+transparent: false
+model: cube
+textures:
+  top: gold_ore
+  bottom: gold_ore
+  left: gold_ore
+  right: gold_ore
+  front: gold_ore
+  back: gold_ore

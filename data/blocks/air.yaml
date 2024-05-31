@@ -1,8 +1,9 @@
-Transparent: true
-Textures:
-  Top: placeholder
-  Bottom: placeholder
-  Left: placeholder
-  Right: placeholder
-  Front: placeholder
-  Back: placeholder
+transparent: true
+model: cube
+textures:
+  top: placeholder
+  bottom: placeholder
+  left: placeholder
+  right: placeholder
+  front: placeholder
+  back: placeholder

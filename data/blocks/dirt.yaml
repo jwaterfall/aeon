@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: dirt
-  Bottom: dirt
-  Left: dirt
-  Right: dirt
-  Front: dirt
-  Back: dirt
+transparent: false
+model: cube
+textures:
+  top: dirt
+  bottom: dirt
+  left: dirt
+  right: dirt
+  front: dirt
+  back: dirt

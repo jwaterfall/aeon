@@ -1,8 +1,9 @@
-Transparent: false
-Textures:
-  Top: iron_ore
-  Bottom: iron_ore
-  Left: iron_ore
-  Right: iron_ore
-  Front: iron_ore
-  Back: iron_ore
+transparent: false
+model: cube
+textures:
+  top: iron_ore
+  bottom: iron_ore
+  left: iron_ore
+  right: iron_ore
+  front: iron_ore
+  back: iron_ore

@@ -253,7 +253,7 @@ namespace Aeon
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
-            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone"));
+            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone_slab"));
             RenderChunk(chunkPosition);
 
             if (localPosition.X < 1)
