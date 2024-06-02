@@ -18,7 +18,6 @@ namespace Aeon
         private Task renderTask;
         private Vector3I? lastPlayerChunkPosition;
 
-        private Stopwatch generationStopwatch = new Stopwatch();
         private Stopwatch renderingStopwatch = new Stopwatch();
         private double totalGenerationTime = 0;
         private double totalRenderingTime = 0;
@@ -116,16 +115,19 @@ namespace Aeon
 
                     tasks[i] = Task.Run(() =>
                     {
-                        generationStopwatch.Restart();
+                        var stopwatch = new Stopwatch();
+                        stopwatch.Start();
+
                         if (!chunk.generated)
                         {
                             chunk.GenerateBlocks(terrainGenerator, WorldPresets.Instance.Get("default"));
                         }
-                        generationStopwatch.Stop();
+
+                        stopwatch.Stop();
 
                         lock (this)
                         {
-                            totalGenerationTime += generationStopwatch.Elapsed.TotalMilliseconds;
+                            totalGenerationTime += stopwatch.Elapsed.TotalMilliseconds;
                             generationCount++;
                         }
                     });
@@ -254,44 +256,15 @@ namespace Aeon
 
         private void BreakBlock(Vector3I worldPosition)
         {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-            var localPosition = WorldToLocalPosition(worldPosition);
-
-            chunks[chunkPosition].BreakBlock(localPosition);
-            RenderChunk(chunkPosition);
-
-            if (localPosition.X < 1)
-            {
-                RenderChunk(chunkPosition + Vector3I.Left);
-            }
-            else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
-            {
-                RenderChunk(chunkPosition + Vector3I.Right);
-            }
-            if (localPosition.Y < 1)
-            {
-               RenderChunk(chunkPosition + Vector3I.Down);
-            }
-            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2)
-            {
-               RenderChunk(chunkPosition + Vector3I.Up);
-            }
-            if (localPosition.Z < 1)
-            {
-                RenderChunk(chunkPosition + Vector3I.Forward);
-            }
-            else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
-            {
-                RenderChunk(chunkPosition + Vector3I.Back);
-            }
+            PlaceBlock(worldPosition, "air");
         }
 
-        private void PlaceBlock(Vector3I worldPosition)
+        private void PlaceBlock(Vector3I worldPosition, string block = "stone_slope")
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
-            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone_slope"));
+            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get(block));
             RenderChunk(chunkPosition);
 
             if (localPosition.X < 1)
