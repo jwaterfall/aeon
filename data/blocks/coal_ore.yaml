@@ -1,4 +1,3 @@
-transparent: false
 model: cube
 textures:
   top: coal_ore

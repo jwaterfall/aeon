@@ -1,0 +1,9 @@
+transparent: true
+model: cube
+textures:
+  top: spruce_leaves
+  bottom: spruce_leaves
+  left: spruce_leaves
+  right: spruce_leaves
+  front: spruce_leaves
+  back: spruce_leaves

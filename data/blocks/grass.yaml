@@ -1,4 +1,3 @@
-transparent: false
 model: cube
 textures:
   top: grass_top

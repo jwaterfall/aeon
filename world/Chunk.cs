@@ -126,6 +126,85 @@ namespace Aeon
                 }
             }
 
+            // Add grass
+            for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+            {
+                for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
+                {
+                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+
+                    var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
+                    if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
+
+                    var blockBelow = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
+
+                    var randomNumber = random.NextDouble();
+                    if (randomNumber > 0.2f) continue;
+                    SetBlock(new Vector3I(x, localHeight + 1, z), BlockTypes.Instance.Get("short_grass"));
+                }
+            }
+
+            // Add trees
+            for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+            {
+                for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
+                {
+                    var randomNumber = random.NextDouble();
+                    if (randomNumber > 0.02f) continue;
+
+                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+
+                    var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
+                    if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
+
+                    var blockBelow = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
+
+                    var trunkHeight = random.Next(5, 10);
+
+                    // Kill the grass
+                    SetBlock(new Vector3I(x, localHeight, z), BlockTypes.Instance.Get("dirt"));
+
+                    // Trunk
+                    for (int y = 1; y <= trunkHeight; y++)
+                    {
+                        var localPosition = new Vector3I(x, localHeight + y, z);
+                        SetBlock(localPosition, BlockTypes.Instance.Get("spruce_log"));
+                    }
+
+                    // Brim
+                    var brimHeight = random.Next(1, 3);
+                    int brimWidth = 2;
+                    for (int y = 1; y <= brimHeight; y++)
+                    {
+                        for (int xOffset = -brimWidth; xOffset <= brimWidth; xOffset++)
+                        {
+                            for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
+                            {
+                                var localPosition = new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset);
+                                SetBlock(localPosition, BlockTypes.Instance.Get("spruce_leaves"));
+                            }
+                        }
+                    }
+
+                    // Top
+                    var topHeight = random.Next(1, 2);
+                    int topWidth = 1;
+                    for (int y = 1; y <= topHeight; y++)
+                    {
+                        for (int xOffset = -topWidth; xOffset <= topWidth; xOffset++)
+                        {
+                            for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
+                            {
+                                var localPosition = new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset);
+                                SetBlock(localPosition, BlockTypes.Instance.Get("spruce_leaves"));
+                            }
+                        }
+                    }
+                }
+            }
+
             generated = true;
         }
 
@@ -147,6 +226,8 @@ namespace Aeon
 
         private void SetBlock(Vector3I localPosition, BlockType blockType, BlockType replaces = null)
         {
+            if (!IsInChunk(localPosition)) return;
+
             if (replaces != null)
             {
                 var currentBlockType = chunkBlockTypes[GetFlatIndex(localPosition)];

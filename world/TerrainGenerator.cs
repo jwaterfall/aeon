@@ -1,4 +1,5 @@
 using Godot;
+using System;
 
 namespace Aeon
 {
@@ -36,7 +37,7 @@ namespace Aeon
             erosionCurve.Bake();
 
             initialized = true;
-        }       
+        }
 
         public int GetHeight(Vector2I globalPosition)
         {

@@ -1,0 +1,4 @@
+transparent: true
+model: cross
+textures:
+  all: short_grass

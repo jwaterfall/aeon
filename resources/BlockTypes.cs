@@ -36,7 +36,8 @@ public class BlockType
 
 public class RawBlock
 {
-    public bool Transparent { get; set; }
+    [DefaultValue(false)]
+    public bool Transparent { get; set; } = false;
     public string Model { get; set; }
     public Dictionary<string, string> Textures { get; set; }
 }
@@ -53,8 +54,8 @@ public class RawFace
 
 public class RawModel
 {
-    [DefaultValue(new string[] { "down", "up", "north", "south", "west", "east" })]
-    public List<string> Occludes { get; set; } = new() { "down", "up", "north", "south", "west", "east" };
+    [DefaultValue(new string[] {})]
+    public List<string> Occludes { get; set; } = new() {};
     public List<RawFace> Faces { get; set; }
 }
 

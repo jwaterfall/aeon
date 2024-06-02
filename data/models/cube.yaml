@@ -1,3 +1,10 @@
+occludes:
+  - down
+  - north
+  - south
+  - east
+  - west
+  - up
 faces:
   - vertices:
       - [0, 1, 0]

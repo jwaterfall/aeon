@@ -1,0 +1,8 @@
+model: cube
+textures:
+  top: spruce_log_end
+  bottom: spruce_log_end
+  left: spruce_log_side
+  right: spruce_log_side
+  front: spruce_log_side
+  back: spruce_log_side
