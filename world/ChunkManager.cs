@@ -1,8 +1,10 @@
 using Godot;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
 namespace Aeon
 {
@@ -16,11 +18,30 @@ namespace Aeon
         private Task renderTask;
         private Vector3I? lastPlayerChunkPosition;
 
+        private Stopwatch generationStopwatch = new Stopwatch();
+        private Stopwatch renderingStopwatch = new Stopwatch();
+        private double totalGenerationTime = 0;
+        private double totalRenderingTime = 0;
+        private int generationCount = 0;
+        private int renderingCount = 0;
+        private double timeAccumulator = 0;
+
         public override void _Ready()
         {
             var customSignals = GetNode<CustomSignals>("/root/CustomSignals");
             customSignals.BreakBlock += BreakBlock;
             customSignals.PlaceBlock += PlaceBlock;
+        }
+
+        public override void _Process(double delta)
+        {
+            timeAccumulator += delta;
+
+            if (timeAccumulator >= 5.0f)
+            {
+                LogAverages();
+                timeAccumulator = 0;
+            }
         }
 
         public void Update(Vector3 playerPosition)
@@ -95,9 +116,17 @@ namespace Aeon
 
                     tasks[i] = Task.Run(() =>
                     {
+                        generationStopwatch.Restart();
                         if (!chunk.generated)
                         {
                             chunk.GenerateBlocks(terrainGenerator, WorldPresets.Instance.Get("default"));
+                        }
+                        generationStopwatch.Stop();
+
+                        lock (this)
+                        {
+                            totalGenerationTime += generationStopwatch.Elapsed.TotalMilliseconds;
+                            generationCount++;
                         }
                     });
                 }
@@ -111,8 +140,17 @@ namespace Aeon
                 var chunkPosition = chunksToRender[0];
                 chunksToRender.RemoveAt(0);
 
-                renderTask = Task.Run(() => {
+                renderTask = Task.Run(() =>
+                {
+                    renderingStopwatch.Restart();
                     RenderChunk(chunkPosition);
+                    renderingStopwatch.Stop();
+
+                    lock (this)
+                    {
+                        totalRenderingTime += renderingStopwatch.Elapsed.TotalMilliseconds;
+                        renderingCount++;
+                    }
                 });
             }
         }
@@ -279,6 +317,21 @@ namespace Aeon
             else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
             {
                 RenderChunk(chunkPosition + Vector3I.Back);
+            }
+        }
+
+        private void LogAverages()
+        {
+            if (generationCount > 0)
+            {
+                double averageGenerationTime = totalGenerationTime / generationCount;
+                GD.Print($"Average Generation Time: {averageGenerationTime} ms");
+            }
+
+            if (renderingCount > 0)
+            {
+                double averageRenderingTime = totalRenderingTime / renderingCount;
+                GD.Print($"Average Rendering Time: {averageRenderingTime} ms");
             }
         }
     }
