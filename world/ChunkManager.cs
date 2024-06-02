@@ -121,10 +121,10 @@ namespace Aeon
         {
             var chunk = chunks[chunkPosition];
 
-            var northChunkPosition = chunkPosition + Vector3I.Forward;
-            var eastChunkPosition = chunkPosition + Vector3I.Right;
-            var southChunkPosition = chunkPosition + Vector3I.Back;
-            var westChunkPosition = chunkPosition + Vector3I.Left;
+            var westChunkPosition = chunkPosition + Vector3I.Forward;
+            var southChunkPosition = chunkPosition + Vector3I.Right;
+            var eastChunkPosition = chunkPosition + Vector3I.Back;
+            var northChunkPosition = chunkPosition + Vector3I.Left;
             var upChunkPosition = chunkPosition + Vector3I.Up;
             var downChunkPosition = chunkPosition + Vector3I.Down;
 
@@ -140,10 +140,10 @@ namespace Aeon
 
         private bool CanRenderChunk(Vector3I chunkPosition)
         {
-            var northChunkPosition = chunkPosition + Vector3I.Forward;
-            var eastChunkPosition = chunkPosition + Vector3I.Right;
-            var southChunkPosition = chunkPosition + Vector3I.Back;
-            var westChunkPosition = chunkPosition + Vector3I.Left;
+            var westChunkPosition = chunkPosition + Vector3I.Forward;
+            var southChunkPosition = chunkPosition + Vector3I.Right;
+            var eastChunkPosition = chunkPosition + Vector3I.Back;
+            var northChunkPosition = chunkPosition + Vector3I.Left;
             var upChunkPosition = chunkPosition + Vector3I.Up;
             var downChunkPosition = chunkPosition + Vector3I.Down;
 
@@ -253,7 +253,7 @@ namespace Aeon
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
-            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone_slab"));
+            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get("stone_slope"));
             RenderChunk(chunkPosition);
 
             if (localPosition.X < 1)

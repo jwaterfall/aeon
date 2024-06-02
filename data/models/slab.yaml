@@ -1,3 +1,5 @@
+occludes:
+  - down
 faces:
   - vertices:
       - [0, 0.5, 0]
@@ -5,42 +7,39 @@ faces:
       - [1, 0.5, 1]
       - [0, 0.5, 1]
     texture: top
+    uv: [0, 0.5, 1, 1]
   - vertices:
       - [0, 0, 0]
       - [0, 0, 1]
       - [1, 0, 1]
       - [1, 0, 0]
+    occluded_by: down
     texture: bottom
-    cullface: down
   - vertices:
       - [0, 0.5, 1]
       - [0, 0, 1]
       - [0, 0, 0]
       - [0, 0.5, 0]
-    texture: left
-    cullface: west
-    uv: [0, 0.5, 1, 1]
-  - vertices:
-      - [1, 0.5, 0]
-      - [1, 0, 0]
-      - [1, 0, 1]
-      - [1, 0.5, 1]
-    texture: right
-    cullface: east
-    uv: [0, 0.5, 1, 1]
-  - vertices:
-      - [1, 0.5, 1]
-      - [1, 0, 1]
-      - [0, 0, 1]
-      - [0, 0.5, 1]
-    texture: front
-    cullface: north
-    uv: [0, 0.5, 1, 1]
-  - vertices:
-      - [0, 0.5, 0]
-      - [0, 0, 0]
-      - [1, 0, 0]
-      - [1, 0.5, 0]
+    occluded_by: north
     texture: back
-    cullface: south
-    uv: [0, 0.5, 1, 1]
+  - vertices:
+      - [1, 0.5, 0]
+      - [1, 0, 0]
+      - [1, 0, 1]
+      - [1, 0.5, 1]
+    occluded_by: south
+    texture: front
+  - vertices:
+      - [1, 0.5, 1]
+      - [1, 0, 1]
+      - [0, 0, 1]
+      - [0, 0.5, 1]
+    occluded_by: east
+    texture: right
+  - vertices:
+      - [0, 0.5, 0]
+      - [0, 0, 0]
+      - [1, 0, 0]
+      - [1, 0.5, 0]
+    occluded_by: west
+    texture: left

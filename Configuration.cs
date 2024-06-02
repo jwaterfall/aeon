@@ -6,7 +6,7 @@ namespace Aeon
     {
         public static readonly Vector3I CHUNK_DIMENSION = new(32, 32, 32);
         public static readonly float MOUSE_SENSITIVITY = 0.3f;
-        public static readonly float MOVEMENT_SPEED = 10;
+        public static readonly float MOVEMENT_SPEED = 8;
         public static readonly float FLYING_SPEED = 50;
         public static readonly float GRAVITY = 30;
         public static readonly float JUMP_VELOCITY = 8f;

@@ -1,10 +1,12 @@
+occludes:
+  - down
+  - north
 faces:
   - vertices:
       - [0, 1, 0]
-      - [1, 1, 0]
-      - [1, 1, 1]
+      - [1, 0, 0]
+      - [1, 0, 1]
       - [0, 1, 1]
-    occluded_by: up
     texture: top
   - vertices:
       - [0, 0, 0]
@@ -21,14 +23,6 @@ faces:
     occluded_by: north
     texture: back
   - vertices:
-      - [1, 1, 0]
-      - [1, 0, 0]
-      - [1, 0, 1]
-      - [1, 1, 1]
-    occluded_by: south
-    texture: front
-  - vertices:
-      - [1, 1, 1]
       - [1, 0, 1]
       - [0, 0, 1]
       - [0, 1, 1]
@@ -38,6 +32,5 @@ faces:
       - [0, 1, 0]
       - [0, 0, 0]
       - [1, 0, 0]
-      - [1, 1, 0]
     occluded_by: west
     texture: left

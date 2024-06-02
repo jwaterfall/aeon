@@ -8,9 +8,8 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 
-public enum Cullface
+public enum Direction
 {
-    None,
     Down,
     Up,
     North,
@@ -23,7 +22,7 @@ public class Face
 {
     public List<Vector3> Vertices;
     public Vector2 TextureAtlasOffset;
-    public Cullface Cullface;
+    public Nullable<Direction> OccludedBy;
     public List<float> UV;
 }
 
@@ -31,6 +30,7 @@ public class BlockType
 {
     public string Name;
     public bool Transparent;
+    public List<Direction> Occludes;
     public List<Face> Faces;
 }
 
@@ -45,14 +45,16 @@ public class RawFace
 {
     public List<List<float>> Vertices { get; set; }
     public string Texture { get; set; }
-    [DefaultValue("none")]
-    public string Cullface { get; set; } = "none";
+    [DefaultValue(null)]
+    public string OccludedBy { get; set; } = null;
     [DefaultValue(new int[] { 0, 0, 1, 1 })]
     public List<float> Uv { get; set; } = new() { 0, 0, 1, 1 };
 }
 
 public class RawModel
 {
+    [DefaultValue(new string[] { "down", "up", "north", "south", "west", "east" })]
+    public List<string> Occludes { get; set; } = new() { "down", "up", "north", "south", "west", "east" };
     public List<RawFace> Faces { get; set; }
 }
 
@@ -119,7 +121,7 @@ namespace Aeon
         protected RawModel LoadModelFile(string name)
         {
             var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
 
             var text = File.ReadAllText($"{modelsDirectory}/{name}{extension}");
@@ -144,20 +146,21 @@ namespace Aeon
         protected void LoadBlockFile(string name, Dictionary<string, RawModel> models, Dictionary<string, Vector2I> textureAtlasOffsets)
         {
             var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
 
             var text = File.ReadAllText($"{blocksDirectory}/{name}{extension}");
             var data = deserializer.Deserialize<RawBlock>(text);
 
+            var model = models[data.Model];
+
             var blockType = new BlockType
             {
                 Name = name,
                 Transparent = data.Transparent,
+                Occludes = data.Transparent ? new List<Direction> {} : model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
                 Faces = new List<Face>()
             };
-
-            var model = models[data.Model];
 
             foreach (var face in model.Faces)
             {
@@ -169,7 +172,7 @@ namespace Aeon
                     {
                         Vertices = face.Vertices.ConvertAll(v => new Vector3(v[0], v[1], v[2])),
                         TextureAtlasOffset = atlasOffset,
-                        Cullface = (Cullface)Enum.Parse(typeof(Cullface), face.Cullface, true),
+                        OccludedBy = face.OccludedBy == null ? null : (Direction)Enum.Parse(typeof(Direction), face.OccludedBy, true),
                         UV = face.Uv
                     });
                 }

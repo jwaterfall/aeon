@@ -1,9 +1,8 @@
 transparent: false
-model: slab
+model: slope
 textures:
   top: stone
   bottom: stone
   left: stone
   right: stone
-  front: stone
   back: stone
