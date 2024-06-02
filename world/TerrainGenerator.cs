@@ -27,6 +27,17 @@ namespace Aeon
         [Export]
         private float noodleCaveNoiseThreshold = 0.05f;
 
+        public bool initialized = false;
+
+        public override void _Ready()
+        {
+            continentalnessCurve.Bake();
+            peaksAndValleysCurve.Bake();
+            erosionCurve.Bake();
+
+            initialized = true;
+        }       
+
         public int GetHeight(Vector2I globalPosition)
         {
             float continentalness = (continentalnessNoise.GetNoise2D(globalPosition.X, globalPosition.Y) + 1) / 2;
@@ -34,8 +45,8 @@ namespace Aeon
             float erosion = (erosionNoise.GetNoise2D(globalPosition.X, globalPosition.Y) + 1) / 2;
 
             int height = Mathf.RoundToInt(
-                continentalnessCurve.SampleBaked(continentalness) +
-                (peaksAndValleysCurve.SampleBaked(peaksAndValleys) * erosionCurve.SampleBaked(erosion))
+                continentalnessCurve.Sample(continentalness) +
+                (peaksAndValleysCurve.Sample(peaksAndValleys) * erosionCurve.Sample(erosion))
             );
 
             return height;

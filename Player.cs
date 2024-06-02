@@ -139,7 +139,7 @@ namespace Aeon
                 }
                 else if (Input.IsActionJustPressed("Place"))
                 {
-                    customSignals.EmitSignal(nameof(CustomSignals.PlaceBlock), worldPosition + normal);
+                    customSignals.EmitSignal(nameof(CustomSignals.PlaceBlock), worldPosition + normal, "stone_slope");
                 }
             }
             else

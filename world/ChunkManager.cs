@@ -43,7 +43,7 @@ namespace Aeon
             }
         }
 
-        public void Update(Vector3 playerPosition)
+        public void Update(Vector3 playerPosition, TerrainGenerator terrainGenerator)
         {
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
@@ -53,7 +53,7 @@ namespace Aeon
                 .Select(chunk => chunk.chunkPosition)
                 .ToList();
 
-            GenerateChunks(playerChunkPosition);
+            GenerateChunks(playerChunkPosition, terrainGenerator);
             RenderChunks(chunksToRender);
 
             if (lastPlayerChunkPosition != playerChunkPosition)
@@ -90,10 +90,8 @@ namespace Aeon
             }
         }
 
-        private void GenerateChunks(Vector3I playerChunkPosition)
+        private void GenerateChunks(Vector3I playerChunkPosition, TerrainGenerator terrainGenerator)
         {
-            var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
-
             var sortedChunksToGenerate = chunksToGenerate
                 .OrderBy(chunkPosition => ((Vector3)chunkPosition).DistanceTo(playerChunkPosition))
                 .ToList();
@@ -259,7 +257,7 @@ namespace Aeon
             PlaceBlock(worldPosition, "air");
         }
 
-        private void PlaceBlock(Vector3I worldPosition, string block = "stone_slope")
+        private void PlaceBlock(Vector3I worldPosition, string block)
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);

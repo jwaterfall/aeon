@@ -12,15 +12,16 @@ namespace Aeon
 
         public override void _Process(double delta)
         {
-            Node3D player = GetNode<Player>("Player");
-            ChunkManager chunkManager = GetNode<ChunkManager>("ChunkManager");
+            var player = GetNode<Player>("Player");
+            var chunkManager = GetNode<ChunkManager>("ChunkManager");
+            var terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
 
-            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded)
+            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded || !terrainGenerator.initialized)
             {
                 return;
             }
 
-            chunkManager.Update(player.Position);
+            chunkManager.Update(player.Position, terrainGenerator);
         }
     }
 }
