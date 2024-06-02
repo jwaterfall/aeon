@@ -159,7 +159,7 @@ namespace Aeon
             {
                 Name = name,
                 Transparent = data.Transparent,
-                Occludes = data.Transparent ? new List<Direction> {} : model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
+                Occludes = model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
                 Faces = new List<Face>()
             };
 
