@@ -24,6 +24,26 @@ namespace Aeon
 
         private BlockType[] chunkBlockTypes = new BlockType[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
 
+        private Dictionary<Direction, Vector3I> faceDirections = new()
+        {
+            { Direction.Up, Vector3I.Up },
+            { Direction.Down, Vector3I.Down },
+            { Direction.North, Vector3I.Left },
+            { Direction.South, Vector3I.Right },
+            { Direction.West, Vector3I.Forward },
+            { Direction.East, Vector3I.Back }
+        };
+
+        private Dictionary<Direction, Direction> inverseDirections = new()
+        {
+            { Direction.Up, Direction.Down },
+            { Direction.Down, Direction.Up },
+            { Direction.North, Direction.South },
+            { Direction.South, Direction.North },
+            { Direction.West, Direction.East },
+            { Direction.East, Direction.West },
+        };
+
         public override void _Ready()
         {
             collisionShapeNode = new();
@@ -48,15 +68,14 @@ namespace Aeon
         {
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
-                for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
+                for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
+                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+
+                    for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
                     {
                         var globalPosition = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
-
-                        int waterLevel = 64;
-
-                        var blockType = terrainGenerator.GetBlockType(globalPosition, waterLevel);
+                        var blockType = terrainGenerator.GetBlockType(globalPosition, height);
 
                         SetBlock(new Vector3I(x, y, z), blockType);
                     }
@@ -247,26 +266,6 @@ namespace Aeon
             for (int i = 0; i < blockType.Faces.Count; i++)
             {
                 var face = blockType.Faces[i];
-
-                Dictionary<Direction, Vector3I> faceDirections = new()
-                {
-                    { Direction.Up, Vector3I.Up },
-                    { Direction.Down, Vector3I.Down },
-                    { Direction.North, Vector3I.Left },
-                    { Direction.South, Vector3I.Right },
-                    { Direction.West, Vector3I.Forward },
-                    { Direction.East, Vector3I.Back }
-                };
-
-                Dictionary<Direction, Direction> inverseDirections = new()
-                {
-                    { Direction.Up, Direction.Down },
-                    { Direction.Down, Direction.Up },
-                    { Direction.North, Direction.South },
-                    { Direction.South, Direction.North },
-                    { Direction.West, Direction.East },
-                    { Direction.East, Direction.West },
-                };
 
                 if (face.OccludedBy.HasValue)
                 {
