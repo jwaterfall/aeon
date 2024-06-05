@@ -106,7 +106,7 @@ namespace Aeon
                     chunksToGenerate = new ConcurrentQueue<Vector3I>(sortedChunksToGenerate); // Update the queue
 
                     Chunk chunk = chunkScene.Instantiate<Chunk>();
-                    chunk.SetChunkPosition(chunkPosition);
+                    chunk.Initialize(this, chunkPosition);
                     AddChild(chunk);
 
                     chunks[chunkPosition] = chunk;
@@ -158,22 +158,7 @@ namespace Aeon
         private void RenderChunk(Vector3I chunkPosition)
         {
             var chunk = chunks[chunkPosition];
-
-            var westChunkPosition = chunkPosition + Vector3I.Forward;
-            var southChunkPosition = chunkPosition + Vector3I.Right;
-            var eastChunkPosition = chunkPosition + Vector3I.Back;
-            var northChunkPosition = chunkPosition + Vector3I.Left;
-            var upChunkPosition = chunkPosition + Vector3I.Up;
-            var downChunkPosition = chunkPosition + Vector3I.Down;
-
-            var northChunk = chunks[northChunkPosition];
-            var eastChunk = chunks[eastChunkPosition];
-            var southChunk = chunks[southChunkPosition];
-            var westChunk = chunks[westChunkPosition];
-            var upChunk = chunks[upChunkPosition];
-            var downChunk = chunks[downChunkPosition];
-
-            chunk.Render(northChunk, eastChunk, southChunk, westChunk, upChunk, downChunk);
+            chunk.Render();
         }
 
         private bool CanRenderChunk(Vector3I chunkPosition)
@@ -232,6 +217,19 @@ namespace Aeon
                 x += dx;
                 z += dz;
             }
+        }
+
+        public BlockType GetBlock(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (chunks.ContainsKey(chunkPosition))
+            {
+                return chunks[chunkPosition].GetBlock(localPosition);
+            }
+
+            return null;
         }
 
         private Vector3I WorldToChunkPosition(Vector3 worldPosition)

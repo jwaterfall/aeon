@@ -19,6 +19,7 @@ namespace Aeon
         private CollisionShape3D transparentCollisionShapeNode;
 
         public Vector3I chunkPosition;
+        private ChunkManager chunkManager;
         public bool generated = false;
         public bool rendered = false;
 
@@ -246,7 +247,7 @@ namespace Aeon
             return localPosition.X + localPosition.Y * Configuration.CHUNK_DIMENSION.X + localPosition.Z * Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y;
         }
 
-        public void Render(Chunk northChunk, Chunk southChunk, Chunk eastChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
+        public void Render()
         {
             surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             surfaceTool.SetSmoothGroup(UInt32.MaxValue);
@@ -260,7 +261,7 @@ namespace Aeon
                 {
                     for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                     {
-                        RenderBlock(new Vector3I(x, y, z), northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk);
+                        RenderBlock(new Vector3I(x, y, z));
                     }
                 }
             }
@@ -289,47 +290,16 @@ namespace Aeon
             rendered = true;
         }
 
-        private bool CheckTransparent(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType, Chunk northChunk, Chunk eastChunk, Chunk southChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
+        private Vector3I GetWorldPosition(Vector3I localPosition)
         {
-            if (localPosition.X < 0)
-            {
-                // Check if the block in the west neighboring chunk is transparent
-                return northChunk.CheckTransparent(new Vector3I(Configuration.CHUNK_DIMENSION.X - 1, localPosition.Y, localPosition.Z), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
+            return localPosition + chunkPosition * Configuration.CHUNK_DIMENSION;
+        }
 
-            if (localPosition.X >= Configuration.CHUNK_DIMENSION.X)
-            {
-                // Check if the block in the east neighboring chunk is transparent
-                return eastChunk.CheckTransparent(new Vector3I(0, localPosition.Y, localPosition.Z), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
-
-            if (localPosition.Y < 0)
-            {
-                // Check if the block in the down neighboring chunk is transparent
-                return downChunk.CheckTransparent(new Vector3I(localPosition.X, Configuration.CHUNK_DIMENSION.Y - 1, localPosition.Z), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
-
-            if (localPosition.Y >= Configuration.CHUNK_DIMENSION.Y)
-            {
-                // Check if the block in the up neighboring chunk is transparent
-                return upChunk.CheckTransparent(new Vector3I(localPosition.X, 0, localPosition.Z), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
-
-            if (localPosition.Z < 0)
-            {
-                // Check if the block in the north neighboring chunk is transparent
-                return westChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, Configuration.CHUNK_DIMENSION.Z - 1), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
-
-            if (localPosition.Z >= Configuration.CHUNK_DIMENSION.Z)
-            {
-                // Check if the block in the south neighboring chunk is transparent
-                return southChunk.CheckTransparent(new Vector3I(localPosition.X, localPosition.Y, 0), faceToCheck, sourceBlockType, null, null, null, null, null, null);
-            }
-
-            // Check in the current chunk
-            var blockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
-            var blockType = BlockTypes.Instance.Get(blockTypeId);
+        private bool CheckTransparent(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
+        {
+            var blockType = IsOutsideChunk(localPosition)
+                ? chunkManager.GetBlock(GetWorldPosition(localPosition))
+                : GetBlock(localPosition);
 
             if (!blockType.Occludes.Contains(faceToCheck))
             {
@@ -339,7 +309,12 @@ namespace Aeon
             return blockType.Transparent && blockType != sourceBlockType;
         }
 
-        private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk eastChunk, Chunk southChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
+        private bool IsOutsideChunk(Vector3I localPosition)
+        {
+            return localPosition.X < 0 || localPosition.X >= Configuration.CHUNK_DIMENSION.X || localPosition.Y < 0 || localPosition.Y >= Configuration.CHUNK_DIMENSION.Y || localPosition.Z < 0 || localPosition.Z >= Configuration.CHUNK_DIMENSION.Z;
+        }
+
+        private void RenderBlock(Vector3I localPosition)
         {
             var blockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
             var blockType = BlockTypes.Instance.Get(blockTypeId);
@@ -359,7 +334,7 @@ namespace Aeon
                     var directionOfBlockToCheck = faceDirections[face.OccludedBy.Value];
                     var faceToCheck = inverseDirections[face.OccludedBy.Value];
 
-                    if (!CheckTransparent(localPosition + directionOfBlockToCheck, faceToCheck, blockType, northChunk, southChunk, eastChunk, westChunk, upChunk, downChunk))
+                    if (!CheckTransparent(localPosition + directionOfBlockToCheck, faceToCheck, blockType))
                     {
                         continue;
                     }
@@ -367,6 +342,11 @@ namespace Aeon
 
                 RenderFace(face, localPosition, blockType.Transparent);
             }
+        }
+
+        public BlockType GetBlock(Vector3I localPosition)
+        {
+            return BlockTypes.Instance.Get(chunkBlockTypes[GetFlatIndex(localPosition)]);
         }
 
         private void RenderFace(Face face, Vector3I localPosition, bool transparent = false)
@@ -395,11 +375,14 @@ namespace Aeon
             }
         }
 
-        public void SetChunkPosition(Vector3I newChunkPosition)
+        public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
         {
-            chunkPosition = newChunkPosition;
-            Position = new Vector3I(newChunkPosition.X, newChunkPosition.Y, newChunkPosition.Z) * Configuration.CHUNK_DIMENSION;
+            this.chunkManager = chunkManager;
+            this.chunkPosition = chunkPosition;
+
+            Position = chunkPosition * Configuration.CHUNK_DIMENSION;
         }
+
         public void RenderDebug()
         {
             //MeshInstance3D debugMeshInstance = new();
