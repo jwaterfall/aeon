@@ -28,6 +28,7 @@ public class Face
 
 public class BlockType
 {
+    public byte Id;
     public string Name;
     public bool Transparent;
     public List<Direction> Occludes;
@@ -67,7 +68,8 @@ namespace Aeon
         protected string modelsDirectory = "data/models";
         protected string extension = ".yaml";
         public bool loaded = false;
-        public ConcurrentDictionary<string, BlockType> blockTypesMap = new();
+        public ConcurrentDictionary<byte, BlockType> blockTypesMap = new();
+        protected ConcurrentDictionary<string, byte> nameToIdMap = new();
 
         private static BlockTypes _instance;
 
@@ -85,18 +87,21 @@ namespace Aeon
 
         private BlockTypes() { }
 
+        public BlockType Get(byte id)
+        {
+            return blockTypesMap.ContainsKey(id) ? blockTypesMap[id] : null;
+        }
+
         public BlockType Get(string name)
         {
-            return blockTypesMap.ContainsKey(name) ? blockTypesMap[name] : null;
+            var id = nameToIdMap.ContainsKey(name) ? nameToIdMap[name] : (byte)0;
+            return Get(id);
         }
 
         public void Load(Dictionary<string, Vector2I> textureAtlasOffsets)
         {
-            GD.Print("Loading Models");
             var models = LoadModels();
-            GD.Print("Loading Blocks");
             LoadBlocks(models, textureAtlasOffsets);
-            GD.Print("Finished Loading Blocks");
             loaded = true;
         }
 
@@ -155,8 +160,11 @@ namespace Aeon
 
             var model = models[data.Model];
 
+            var id = (byte)blockTypesMap.Count;
+
             var blockType = new BlockType
             {
+                Id = id,
                 Name = name,
                 Transparent = data.Transparent,
                 Occludes = model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
@@ -183,7 +191,8 @@ namespace Aeon
                 }
             }
 
-            blockTypesMap[name] = blockType;
+            blockTypesMap[id] = blockType;
+            nameToIdMap[name] = id;
         }
     }
 }

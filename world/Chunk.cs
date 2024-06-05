@@ -22,7 +22,7 @@ namespace Aeon
         public bool generated = false;
         public bool rendered = false;
 
-        private BlockType[] chunkBlockTypes = new BlockType[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
+        private byte[] chunkBlockTypes = new byte[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
 
         private Dictionary<Direction, Vector3I> faceDirections = new()
         {
@@ -136,7 +136,8 @@ namespace Aeon
                     var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
                     if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
 
-                    var blockBelow = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    var blockBelowId = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    var blockBelow = BlockTypes.Instance.Get(blockBelowId);
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     var randomNumber = random.NextDouble();
@@ -158,7 +159,8 @@ namespace Aeon
                     var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
                     if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
 
-                    var blockBelow = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    var blockBelowId = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
+                    var blockBelow = BlockTypes.Instance.Get(blockBelowId);
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     var trunkHeight = random.Next(5, 10);
@@ -230,12 +232,13 @@ namespace Aeon
 
             if (replaces != null)
             {
-                var currentBlockType = chunkBlockTypes[GetFlatIndex(localPosition)];
+                var currentBlockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
+                var currentBlockType = BlockTypes.Instance.Get(currentBlockTypeId);
                 if (currentBlockType != replaces) return;
             }
 
             int index = GetFlatIndex(localPosition);
-            chunkBlockTypes[index] = blockType;
+            chunkBlockTypes[index] = blockType.Id;
         }
 
         private int GetFlatIndex(Vector3I localPosition)
@@ -325,7 +328,8 @@ namespace Aeon
             }
 
             // Check in the current chunk
-            BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
+            var blockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
+            var blockType = BlockTypes.Instance.Get(blockTypeId);
 
             if (!blockType.Occludes.Contains(faceToCheck))
             {
@@ -337,7 +341,8 @@ namespace Aeon
 
         private void RenderBlock(Vector3I localPosition, Chunk northChunk, Chunk eastChunk, Chunk southChunk, Chunk westChunk, Chunk upChunk, Chunk downChunk)
         {
-            BlockType blockType = chunkBlockTypes[GetFlatIndex(localPosition)];
+            var blockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
+            var blockType = BlockTypes.Instance.Get(blockTypeId);
 
             if (blockType.Name == "air")
             {
