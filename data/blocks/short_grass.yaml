@@ -1,4 +1,5 @@
 transparent: true
+has_collision: false
 model: cross
 textures:
   all: short_grass

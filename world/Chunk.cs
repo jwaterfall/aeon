@@ -9,14 +9,14 @@ namespace Aeon
         private SurfaceTool surfaceTool = new SurfaceTool();
         private Mesh mesh;
         private MeshInstance3D meshInstance;
-        private ConcavePolygonShape3D collisionShape;
-        private CollisionShape3D collisionShapeNode;
 
         private SurfaceTool transparentSurfaceTool = new SurfaceTool();
         private Mesh transparentMesh;
         private MeshInstance3D transparentMeshInstance;
-        private ConcavePolygonShape3D transparentCollisionShape;
-        private CollisionShape3D transparentCollisionShapeNode;
+
+        private SurfaceTool collisionSurfaceTool = new SurfaceTool();
+        private Shape3D collisionShape;
+        private CollisionShape3D collisionShapeNode;
 
         public Vector3I chunkPosition;
         private ChunkManager chunkManager;
@@ -47,17 +47,14 @@ namespace Aeon
 
         public override void _Ready()
         {
-            collisionShapeNode = new();
-            AddChild(collisionShapeNode);
-
             meshInstance = new();
             AddChild(meshInstance);
 
-            transparentCollisionShapeNode = new();
-            AddChild(transparentCollisionShapeNode);
-
             transparentMeshInstance = new();
             AddChild(transparentMeshInstance);
+
+            collisionShapeNode = new();
+            AddChild(collisionShapeNode);
 
             if (Configuration.CHUNK_BORDERS)
             {
@@ -255,6 +252,9 @@ namespace Aeon
             transparentSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             transparentSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
+            collisionSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+            collisionSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
+
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
                 for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
@@ -268,11 +268,12 @@ namespace Aeon
 
             surfaceTool.GenerateNormals(false);
             mesh = surfaceTool.Commit();
-            collisionShape = mesh.CreateTrimeshShape();
 
             transparentSurfaceTool.GenerateNormals(false);
             transparentMesh = transparentSurfaceTool.Commit();
-            transparentCollisionShape = transparentMesh.CreateTrimeshShape();
+
+            collisionSurfaceTool.GenerateNormals(false);
+            collisionShape = collisionSurfaceTool.Commit().CreateTrimeshShape();
 
             CallThreadSafe("AfterRender");
         }
@@ -281,11 +282,11 @@ namespace Aeon
         {
             meshInstance.MaterialOverride = BlockTextures.Instance.material;
             meshInstance.Mesh = mesh;
-            collisionShapeNode.Shape = collisionShape;
 
             transparentMeshInstance.MaterialOverride = BlockTextures.Instance.transparentMaterial;
             transparentMeshInstance.Mesh = transparentMesh;
-            transparentCollisionShapeNode.Shape = transparentCollisionShape;
+
+            collisionShapeNode.Shape = collisionShape;
 
             rendered = true;
         }
@@ -340,7 +341,7 @@ namespace Aeon
                     }
                 }
 
-                RenderFace(face, localPosition, blockType.Transparent);
+                RenderFace(face, localPosition, blockType.Transparent, blockType.HasCollision);
             }
         }
 
@@ -349,7 +350,7 @@ namespace Aeon
             return BlockTypes.Instance.Get(chunkBlockTypes[GetFlatIndex(localPosition)]);
         }
 
-        private void RenderFace(Face face, Vector3I localPosition, bool transparent = false)
+        private void RenderFace(Face face, Vector3I localPosition, bool transparent = false, bool hasCollision = true)
         {
             Vector2 uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
             float height = 1.0f / BlockTextures.Instance.size.Y;
@@ -367,11 +368,21 @@ namespace Aeon
 
             st.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
 
+            if (hasCollision)
+            {
+                collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
+            }
+
             if (face.Vertices.Count == 4)
             {
                 Vector2 uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
                 Vector3 d = face.Vertices[3] + localPosition;
                 st.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+
+                if (hasCollision)
+                {
+                    collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+                }
             }
         }
 
