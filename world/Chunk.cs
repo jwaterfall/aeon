@@ -296,7 +296,7 @@ namespace Aeon
             return localPosition + chunkPosition * Configuration.CHUNK_DIMENSION;
         }
 
-        private bool CheckTransparent(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
+        private bool ShouldRender(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
         {
             var blockType = IsOutsideChunk(localPosition)
                 ? chunkManager.GetBlock(GetWorldPosition(localPosition))
@@ -307,7 +307,7 @@ namespace Aeon
                 return true;
             }
 
-            return blockType.Transparent && blockType != sourceBlockType;
+            return blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf);
         }
 
         private bool IsOutsideChunk(Vector3I localPosition)
@@ -335,7 +335,7 @@ namespace Aeon
                     var directionOfBlockToCheck = faceDirections[face.OccludedBy.Value];
                     var faceToCheck = inverseDirections[face.OccludedBy.Value];
 
-                    if (!CheckTransparent(localPosition + directionOfBlockToCheck, faceToCheck, blockType))
+                    if (!ShouldRender(localPosition + directionOfBlockToCheck, faceToCheck, blockType))
                     {
                         continue;
                     }

@@ -67,7 +67,7 @@ namespace Aeon
 
             transparentMaterial.AlbedoTexture = textureAtlasTexture;
             transparentMaterial.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
-            transparentMaterial.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+            transparentMaterial.Transparency = BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass;
 
             loaded = true;
 

@@ -31,6 +31,7 @@ public class BlockType
     public byte Id;
     public string Name;
     public bool Transparent;
+    public bool CullsSelf;
     public bool HasCollision;
     public List<Direction> Occludes;
     public List<Face> Faces;
@@ -40,6 +41,8 @@ public class RawBlock
 {
     [DefaultValue(false)]
     public bool Transparent { get; set; } = false;
+    [DefaultValue(false)]
+    public bool CullsSelf { get; set; } = false;
     [DefaultValue(true)]
     public bool HasCollision { get; set; } = true;
     public string Model { get; set; }
@@ -170,6 +173,7 @@ namespace Aeon
                 Id = id,
                 Name = name,
                 Transparent = data.Transparent,
+                CullsSelf = data.CullsSelf,
                 HasCollision = data.HasCollision,
                 Occludes = model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
                 Faces = new List<Face>()

@@ -1,4 +1,6 @@
 transparent: true
+culls_self: true
+has_collision: false
 model: cube
 textures:
   top: water
