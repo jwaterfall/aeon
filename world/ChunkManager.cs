@@ -191,32 +191,20 @@ namespace Aeon
         {
             var radius = Configuration.CHUNK_LOAD_RADIUS;
 
-            int x = 0, z = 0;
-            int dx = 0, dz = -1;
-
-            for (int i = 0; i < Mathf.Pow((2 * radius + 1), 2); i++)
+            for (int x = -radius; x <= radius; x++)
             {
                 for (int y = -radius; y <= radius; y++)
                 {
-                    var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
-                    if (((Vector3)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
+                    for (int z = -radius; z <= radius; z++)
                     {
-                        yield return chunkPosition;
+                        var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
+                        if (((Vector3)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
+                        {
+                            yield return chunkPosition;
+                        }
                     }
                 }
-
-                // If at a corner, change direction
-                if (x == z || (x < 0 && x == -z) || (x > 0 && x == 1 - z))
-                {
-                    int temp = dx;
-                    dx = -dz;
-                    dz = temp;
-                }
-
-                // Move to the next position in the spiral
-                x += dx;
-                z += dz;
-            }
+            }   
         }
 
         public BlockType GetBlock(Vector3I worldPosition)

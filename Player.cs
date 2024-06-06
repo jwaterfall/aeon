@@ -57,13 +57,14 @@ namespace Aeon
         public override void _PhysicsProcess(double delta)
         {
             Vector3 newVelocity = Velocity;
-            Node3D head = GetNode<Node3D>("Head");
-            float speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
 
             if (Paused)
             {
                 return;
             }
+
+            Node3D head = GetNode<Node3D>("Head");
+            float speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
 
             if (Configuration.FLYING_ENABLED)
             {
