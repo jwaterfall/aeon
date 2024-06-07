@@ -4,28 +4,28 @@ namespace Aeon
 {
     public partial class World : Node3D
     {
-        Player Player;
-        ChunkManager ChunkManager;
-        TerrainGenerator TerrainGenerator;
+        private Player _player;
+        private ChunkManager _chunkManager;
+        private TerrainGenerator _terrainGenerator;
 
         public override void _Ready()
         {
             BlockTypes.Instance.Load(BlockTextures.Instance.Load());
             WorldPresets.Instance.Load();
 
-            Player = GetNode<Player>("Player");
-            ChunkManager = GetNode<ChunkManager>("ChunkManager");
-            TerrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
+            _player = GetNode<Player>("Player");
+            _chunkManager = GetNode<ChunkManager>("ChunkManager");
+            _terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
         }
 
         public override void _Process(double delta)
         {
-            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded || !TerrainGenerator.initialized)
+            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded || !_terrainGenerator.initialized)
             {
                 return;
             }
 
-            ChunkManager.Update(Player.Position, TerrainGenerator);
+            _chunkManager.Update(_player.Position, _terrainGenerator);
         }
     }
 }

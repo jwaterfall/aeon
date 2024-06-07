@@ -4,14 +4,14 @@ namespace Aeon
 {
     public partial class Player : CharacterBody3D
     {
-        private bool Paused = false;
-        private float CameraXRotation = 0;
+        private bool _paused = false;
+        private float _cameraXRotation = 0;
 
         public override void _Ready()
         {
             if (Configuration.FLYING_ENABLED)
             {
-                CollisionShape3D collisionShape = GetNode<CollisionShape3D>("CollisionShape3D");
+                var collisionShape = GetNode<CollisionShape3D>("CollisionShape3D");
                 collisionShape.Disabled = true;
             }
 
@@ -20,13 +20,13 @@ namespace Aeon
 
         public override void _Input(InputEvent @event)
         {
-            Node3D Head = GetNode<Node3D>("Head");
-            Camera3D Camera = GetNode<Camera3D>("Head/Camera3D");
+            var head = GetNode<Node3D>("Head");
+            var camera = GetNode<Camera3D>("Head/Camera3D");
 
             if (@event.IsActionPressed("Pause"))
             {
-                Paused = !Paused;
-                if (Paused)
+                _paused = !_paused;
+                if (_paused)
                 {
                     Input.MouseMode = Input.MouseModeEnum.Visible;
                 }
@@ -36,39 +36,39 @@ namespace Aeon
                 }
             }
 
-            if (Paused)
+            if (_paused)
             {
                 return;
             }
 
             if (@event is InputEventMouseMotion)
             {
-                Head.RotateY(Mathf.DegToRad(-(@event as InputEventMouseMotion).Relative.X * Configuration.MOUSE_SENSITIVITY));
+                head.RotateY(Mathf.DegToRad(-(@event as InputEventMouseMotion).Relative.X * Configuration.MOUSE_SENSITIVITY));
 
-                float DeltaX = (@event as InputEventMouseMotion).Relative.Y * Configuration.MOUSE_SENSITIVITY;
-                if (CameraXRotation + DeltaX > -90 && CameraXRotation + DeltaX < 90)
+                var deltaX = (@event as InputEventMouseMotion).Relative.Y * Configuration.MOUSE_SENSITIVITY;
+                if (_cameraXRotation + deltaX > -90 && _cameraXRotation + deltaX < 90)
                 {
-                    Camera.RotateX(Mathf.DegToRad(-DeltaX));
-                    CameraXRotation += DeltaX;
+                    camera.RotateX(Mathf.DegToRad(-deltaX));
+                    _cameraXRotation += deltaX;
                 }
             }
         }
 
         public override void _PhysicsProcess(double delta)
         {
-            Vector3 newVelocity = Velocity;
+            var newVelocity = Velocity;
 
-            if (Paused)
+            if (_paused)
             {
                 return;
             }
 
-            Node3D head = GetNode<Node3D>("Head");
-            float speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
+            var head = GetNode<Node3D>("Head");
+            var speed = Configuration.FLYING_ENABLED ? Configuration.FLYING_SPEED : Configuration.MOVEMENT_SPEED;
 
             if (Configuration.FLYING_ENABLED)
             {
-                Vector3 verticalDirection = Vector3.Zero;
+                var verticalDirection = Vector3.Zero;
 
                 if (Input.IsActionPressed("FlyDown") && !IsOnFloor())
                 {
@@ -100,14 +100,14 @@ namespace Aeon
                 }
             }
 
-            Basis Basis = head.GlobalTransform.Basis;
-            Vector2 InputDirection = Input.GetVector("Left", "Right", "Forward", "Backward");
-            Vector3 Direction = (Basis * new Vector3(InputDirection.X, 0, InputDirection.Y)).Normalized();
+            var basis = head.GlobalTransform.Basis;
+            var inputDirection = Input.GetVector("Left", "Right", "Forward", "Backward");
+            var direction = (basis * new Vector3(inputDirection.X, 0, inputDirection.Y)).Normalized();
 
-            if (Direction.Length() != 0)
+            if (direction.Length() != 0)
             {
-                newVelocity.X = Direction.X * speed;
-                newVelocity.Z = Direction.Z * speed;
+                newVelocity.X = direction.X * speed;
+                newVelocity.Z = direction.Z * speed;
             }
             else
             {
@@ -119,8 +119,8 @@ namespace Aeon
 
             MoveAndSlide();
 
-            RayCast3D ray = GetNode<RayCast3D>("Head/Camera3D/RayCast3D");
-            Node3D blockOutline = GetNode<Node3D>("BlockOutline");
+            var ray = GetNode<RayCast3D>("Head/Camera3D/RayCast3D");
+            var blockOutline = GetNode<Node3D>("BlockOutline");
 
             if (ray.IsColliding())
             {
