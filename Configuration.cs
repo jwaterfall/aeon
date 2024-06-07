@@ -14,6 +14,5 @@ namespace Aeon
         public static readonly int CHUNK_LOAD_RADIUS = 6;
         public static readonly int MAX_STALE_CHUNKS = 100;
         public static readonly int TEXTURE_SIZE = 32;
-        public static readonly bool CHUNK_BORDERS = true;
     }
 }

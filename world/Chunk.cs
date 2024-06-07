@@ -20,10 +20,10 @@ namespace Aeon
 
         public Vector3I chunkPosition;
         private ChunkManager chunkManager;
+        private ChunkData _chunkData;
+
         public bool generated = false;
         public bool rendered = false;
-
-        private byte[] chunkBlockTypes = new byte[Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z];
 
         private Dictionary<Direction, Vector3I> faceDirections = new()
         {
@@ -56,10 +56,7 @@ namespace Aeon
             collisionShapeNode = new();
             AddChild(collisionShapeNode);
 
-            if (Configuration.CHUNK_BORDERS)
-            {
-                CallDeferred("RenderDebug");
-            }
+            _chunkData = new ChunkData(Configuration.CHUNK_DIMENSION);
         }
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
@@ -132,19 +129,25 @@ namespace Aeon
                     var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
 
                     var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
-                    if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
+                    if (localHeight < -1 || localHeight > Configuration.CHUNK_DIMENSION.Y - 2) continue;
 
-                    var blockBelowId = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
-                    var blockBelow = BlockTypes.Instance.Get(blockBelowId);
+                    var blockBelowPosition = new Vector3I(x, localHeight, z);
+                    var blockBelow = IsInChunk(blockBelowPosition) ? GetBlock(blockBelowPosition) : chunkManager.GetBlock(GetGlobalPosition(blockBelowPosition));
+
+                    if (blockBelow == null)
+                    {
+                        // Todo, add grass and other things in second pass after neighbors have been generated
+                        continue;
+                    }
+
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
-                    var randomNumber = random.NextDouble();
-                    if (randomNumber > 0.2f) continue;
+                    if (random.NextDouble() > 0.2f) continue;
                     SetBlock(new Vector3I(x, localHeight + 1, z), BlockTypes.Instance.Get("short_grass"));
                 }
             }
 
-            // Add trees
+            //Add trees
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
@@ -157,8 +160,7 @@ namespace Aeon
                     var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
                     if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
 
-                    var blockBelowId = chunkBlockTypes[GetFlatIndex(new Vector3I(x, localHeight, z))];
-                    var blockBelow = BlockTypes.Instance.Get(blockBelowId);
+                    var blockBelow = _chunkData.GetBlock(new Vector3I(x, localHeight, z));
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     var trunkHeight = random.Next(5, 10);
@@ -208,17 +210,6 @@ namespace Aeon
             generated = true;
         }
 
-        private bool IsInChunk(Vector3I localPosition)
-        {
-            return
-                localPosition.X >= 0 &&
-                localPosition.X < Configuration.CHUNK_DIMENSION.X &&
-                localPosition.Y >= 0 &&
-                localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
-                localPosition.Z >= 0 &&
-                localPosition.Z < Configuration.CHUNK_DIMENSION.Z;
-        }
-
         private Vector3I GetGlobalPosition(Vector3I localPosition)
         {
             return new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
@@ -226,22 +217,34 @@ namespace Aeon
 
         private void SetBlock(Vector3I localPosition, BlockType blockType, BlockType replaces = null)
         {
-            if (!IsInChunk(localPosition)) return;
-
-            if (replaces != null)
+            if (!IsInChunk(localPosition))
             {
-                var currentBlockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
-                var currentBlockType = BlockTypes.Instance.Get(currentBlockTypeId);
-                if (currentBlockType != replaces) return;
+                //throw new ArgumentOutOfRangeException("localPosition");
+                return;
             }
 
-            int index = GetFlatIndex(localPosition);
-            chunkBlockTypes[index] = blockType.Id;
+            if (replaces != null && _chunkData.GetBlock(localPosition) != replaces)
+            {
+                return;
+            }
+
+            _chunkData.SetBlock(localPosition, blockType);
         }
 
-        private int GetFlatIndex(Vector3I localPosition)
+        private bool IsInChunk(Vector3I localPosition)
         {
-            return localPosition.X + localPosition.Y * Configuration.CHUNK_DIMENSION.X + localPosition.Z * Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y;
+            return
+                localPosition.X >= 0 &&
+                localPosition.X < _chunkData.Dimensions.X &&
+                localPosition.Y >= 0 &&
+                localPosition.Y < _chunkData.Dimensions.Y &&
+                localPosition.Z >= 0 &&
+                localPosition.Z < _chunkData.Dimensions.Z;
+        }
+
+        public BlockType GetBlock(Vector3I localPosition)
+        {
+            return _chunkData.GetBlock(localPosition);
         }
 
         public void Render()
@@ -317,8 +320,7 @@ namespace Aeon
 
         private void RenderBlock(Vector3I localPosition)
         {
-            var blockTypeId = chunkBlockTypes[GetFlatIndex(localPosition)];
-            var blockType = BlockTypes.Instance.Get(blockTypeId);
+            var blockType = _chunkData.GetBlock(localPosition);
 
             if (blockType.Name == "air")
             {
@@ -341,13 +343,8 @@ namespace Aeon
                     }
                 }
 
-                RenderFace(face, localPosition, blockType.Transparent, blockType.HasCollision);
+                RenderFace(face, localPosition, blockType);
             }
-        }
-
-        public BlockType GetBlock(Vector3I localPosition)
-        {
-            return BlockTypes.Instance.Get(chunkBlockTypes[GetFlatIndex(localPosition)]);
         }
 
         private void RenderFace(Face face, Vector3I localPosition, bool transparent = false, bool hasCollision = true)
@@ -393,38 +390,6 @@ namespace Aeon
 
             Position = chunkPosition * Configuration.CHUNK_DIMENSION;
         }
-
-        public void RenderDebug()
-        {
-            //MeshInstance3D debugMeshInstance = new();
-            //AddChild(debugMeshInstance);
-
-            //ImmediateMesh debugMesh = new();
-            //debugMeshInstance.Mesh = debugMesh;
-
-            //debugMesh.SurfaceBegin(Mesh.PrimitiveType.Lines);
-
-            //RenderDebugFace(Faces.TOP, debugMesh);
-            //RenderDebugFace(Faces.BOTTOM, debugMesh);
-            //RenderDebugFace(Faces.LEFT, debugMesh);
-            //RenderDebugFace(Faces.RIGHT, debugMesh);
-            //RenderDebugFace(Faces.FRONT, debugMesh);
-            //RenderDebugFace(Faces.BACK, debugMesh);
-
-            //debugMesh.SurfaceEnd();
-        }
-
-        //public void RenderDebugFace(int[] face, ImmediateMesh debugMesh)
-        //{
-        //    debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[1]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[2]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[3]] * Configuration.CHUNK_DIMENSION);
-        //    debugMesh.SurfaceAddVertex(vertices[face[0]] * Configuration.CHUNK_DIMENSION);
-        //}
 
         public void BreakBlock(Vector3I localPosition)
         {
