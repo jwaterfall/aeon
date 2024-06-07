@@ -56,7 +56,7 @@ namespace Aeon
             collisionShapeNode = new();
             AddChild(collisionShapeNode);
 
-            _chunkData = new ChunkData(Configuration.CHUNK_DIMENSION);
+            _chunkData = new StandardChunkData(Configuration.CHUNK_DIMENSION);
         }
 
         public void GenerateBlocks(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
@@ -116,7 +116,7 @@ namespace Aeon
 
                         if (!IsInChunk(localPosition)) continue;
 
-                        SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), BlockTypes.Instance.Get("stone"));
+                        SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), false, BlockTypes.Instance.Get("stone"));
                     }
                 }
             }
@@ -207,6 +207,8 @@ namespace Aeon
                 }
             }
 
+            _chunkData.Optimize(this);
+
             generated = true;
         }
 
@@ -215,7 +217,12 @@ namespace Aeon
             return new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
         }
 
-        private void SetBlock(Vector3I localPosition, BlockType blockType, BlockType replaces = null)
+        public void SetChunkData(ChunkData chunkData)
+        {
+            _chunkData = chunkData;
+        }
+
+        private void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
         {
             if (!IsInChunk(localPosition))
             {
@@ -228,18 +235,23 @@ namespace Aeon
                 return;
             }
 
-            _chunkData.SetBlock(localPosition, blockType);
+            _chunkData.SetBlock(this, localPosition, blockType);
+
+            if (optimize)
+            {
+                _chunkData.Optimize(this);
+            }
         }
 
         private bool IsInChunk(Vector3I localPosition)
         {
             return
                 localPosition.X >= 0 &&
-                localPosition.X < _chunkData.Dimensions.X &&
+                localPosition.X < Configuration.CHUNK_DIMENSION.X &&
                 localPosition.Y >= 0 &&
-                localPosition.Y < _chunkData.Dimensions.Y &&
+                localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
                 localPosition.Z >= 0 &&
-                localPosition.Z < _chunkData.Dimensions.Z;
+                localPosition.Z < Configuration.CHUNK_DIMENSION.Z;
         }
 
         public BlockType GetBlock(Vector3I localPosition)
@@ -393,12 +405,12 @@ namespace Aeon
 
         public void BreakBlock(Vector3I localPosition)
         {
-            SetBlock(localPosition, BlockTypes.Instance.Get("air"));
+            SetBlock(localPosition, BlockTypes.Instance.Get("air"), true);
         }
 
         public void PlaceBlock(Vector3I localPosition, BlockType blockType)
         {
-            SetBlock(localPosition, blockType);
+            SetBlock(localPosition, blockType, true);
         }
     }
 }
