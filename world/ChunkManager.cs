@@ -11,12 +11,12 @@ namespace Aeon
     public partial class ChunkManager : Node3D
     {
         private readonly PackedScene _chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
-        private readonly ConcurrentDictionary<Vector3I, Chunk> _chunks = new();
-        private ConcurrentQueue<Vector3I> _chunksToGenerate = new();
-        private Queue<Vector3I> _chunksToRemove = new();
+        private readonly ConcurrentDictionary<Vector2I, Chunk> _chunks = new();
+        private ConcurrentQueue<Vector2I> _chunksToGenerate = new();
+        private Queue<Vector2I> _chunksToRemove = new();
+        private Vector2I? _lastPlayerChunkPosition;
         private Task[] _tasks = new Task[OS.GetProcessorCount() - 2];
         private Task _renderTask;
-        private Vector3I? _lastPlayerChunkPosition;
 
         private readonly Stopwatch _renderingStopwatch = new();
         private double _totalGenerationTime = 0;
@@ -48,7 +48,7 @@ namespace Aeon
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
             var chunksToRender = _chunks.Values
-                .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition))
+                .OrderBy(chunk => ((Vector2)chunk.ChunkPosition).DistanceTo(playerChunkPosition))
                 .Where(chunk => chunk.IsGenerated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
                 .Select(chunk => chunk.ChunkPosition)
                 .ToList();
@@ -74,7 +74,7 @@ namespace Aeon
             {
                 _lastPlayerChunkPosition = playerChunkPosition;
 
-                var nearbyChunkPositions = new HashSet<Vector3I>(GetNearbyChunkPositions(playerChunkPosition));
+                var nearbyChunkPositions = new HashSet<Vector2I>(GetNearbyChunkPositions(playerChunkPosition));
 
                 // Remove chunks that are no longer nearby
                 foreach (var chunkPosition in _chunks.Keys.Except(nearbyChunkPositions).ToList())
@@ -100,10 +100,10 @@ namespace Aeon
             }
         }
 
-        private void GenerateChunks(Vector3I playerChunkPosition, TerrainGenerator terrainGenerator)
+        private void GenerateChunks(Vector2I playerChunkPosition, TerrainGenerator terrainGenerator)
         {
             var sortedChunksToGenerate = _chunksToGenerate
-                .OrderBy(chunkPosition => ((Vector3)chunkPosition).DistanceTo(playerChunkPosition))
+                .OrderBy(chunkPosition => ((Vector2)chunkPosition).DistanceTo(playerChunkPosition))
                 .ToList();
 
             for (int i = 0; i < _tasks.Length; i++)
@@ -113,7 +113,7 @@ namespace Aeon
                 {
                     var chunkPosition = sortedChunksToGenerate[0];
                     sortedChunksToGenerate.RemoveAt(0);
-                    _chunksToGenerate = new ConcurrentQueue<Vector3I>(sortedChunksToGenerate); // Update the queue
+                    _chunksToGenerate = new (sortedChunksToGenerate); // Update the queue
 
                     var chunk = _chunkScene.Instantiate<Chunk>();
                     chunk.Initialize(this, chunkPosition);
@@ -143,7 +143,7 @@ namespace Aeon
             }
         }
 
-        private void RenderChunks(List<Vector3I> chunksToRender)
+        private void RenderChunks(List<Vector2I> chunksToRender)
         {
             if (chunksToRender.Count > 0 && (_renderTask == null || _renderTask.IsCompleted))
             {
@@ -165,20 +165,18 @@ namespace Aeon
             }
         }
 
-        private void RenderChunk(Vector3I chunkPosition)
+        private void RenderChunk(Vector2I chunkPosition)
         {
             var chunk = _chunks[chunkPosition];
             chunk.Render();
         }
 
-        private bool CanRenderChunk(Vector3I chunkPosition)
+        private bool CanRenderChunk(Vector2I chunkPosition)
         {
-            var westChunkPosition = chunkPosition + Vector3I.Forward;
-            var southChunkPosition = chunkPosition + Vector3I.Right;
-            var eastChunkPosition = chunkPosition + Vector3I.Back;
-            var northChunkPosition = chunkPosition + Vector3I.Left;
-            var upChunkPosition = chunkPosition + Vector3I.Up;
-            var downChunkPosition = chunkPosition + Vector3I.Down;
+            var westChunkPosition = chunkPosition + Vector2I.Up;
+            var southChunkPosition = chunkPosition + Vector2I.Right;
+            var eastChunkPosition = chunkPosition + Vector2I.Down;
+            var northChunkPosition = chunkPosition + Vector2I.Left;
 
             return
                 _chunks.ContainsKey(chunkPosition) &&
@@ -190,28 +188,21 @@ namespace Aeon
                 _chunks.ContainsKey(southChunkPosition) &&
                 _chunks[southChunkPosition].IsGenerated &&
                 _chunks.ContainsKey(westChunkPosition) &&
-                _chunks[westChunkPosition].IsGenerated &&
-                _chunks.ContainsKey(upChunkPosition) &&
-                _chunks[upChunkPosition].IsGenerated &&
-                _chunks.ContainsKey(downChunkPosition) &&
-                _chunks[downChunkPosition].IsGenerated;
+                _chunks[westChunkPosition].IsGenerated;
         }
 
-        private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)
+        private IEnumerable<Vector2I> GetNearbyChunkPositions(Vector2I playerChunkPosition)
         {
             var radius = Configuration.CHUNK_LOAD_RADIUS;
 
             for (int x = -radius; x <= radius; x++)
             {
-                for (int y = -radius; y <= radius; y++)
+                for (int z = -radius; z <= radius; z++)
                 {
-                    for (int z = -radius; z <= radius; z++)
+                    var chunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Y);
+                    if (((Vector2)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
                     {
-                        var chunkPosition = new Vector3I(x + playerChunkPosition.X, y + playerChunkPosition.Y, z + playerChunkPosition.Z);
-                        if (((Vector3)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
-                        {
-                            yield return chunkPosition;
-                        }
+                        yield return chunkPosition;
                     }
                 }
             }
@@ -230,11 +221,10 @@ namespace Aeon
             return null;
         }
 
-        private Vector3I WorldToChunkPosition(Vector3 worldPosition)
+        private Vector2I WorldToChunkPosition(Vector3 worldPosition)
         {
-            return new Vector3I(
+            return new Vector2I(
                 Mathf.FloorToInt(worldPosition.X / Configuration.CHUNK_DIMENSION.X),
-                Mathf.FloorToInt(worldPosition.Y / Configuration.CHUNK_DIMENSION.Y),
                 Mathf.FloorToInt(worldPosition.Z / Configuration.CHUNK_DIMENSION.Z)
             );
         }
@@ -263,27 +253,19 @@ namespace Aeon
 
             if (localPosition.X < 1)
             {
-                RenderChunk(chunkPosition + Vector3I.Left);
+                RenderChunk(chunkPosition + Vector2I.Left);
             }
             else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
             {
-                RenderChunk(chunkPosition + Vector3I.Right);
-            }
-            if (localPosition.Y < 1)
-            {
-                RenderChunk(chunkPosition + Vector3I.Down);
-            }
-            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2)
-            {
-                RenderChunk(chunkPosition + Vector3I.Up);
+                RenderChunk(chunkPosition + Vector2I.Right);
             }
             if (localPosition.Z < 1)
             {
-                RenderChunk(chunkPosition + Vector3I.Forward);
+                RenderChunk(chunkPosition + Vector2I.Up);
             }
             else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
             {
-                RenderChunk(chunkPosition + Vector3I.Back);
+                RenderChunk(chunkPosition + Vector2I.Down);
             }
         }
 

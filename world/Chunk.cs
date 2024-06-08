@@ -18,7 +18,7 @@ namespace Aeon
         private Shape3D _collisionShape;
         private CollisionShape3D _collisionShapeNode;
 
-        public Vector3I ChunkPosition { get; private set; }
+        public Vector2I ChunkPosition { get; private set; }
         private ChunkManager _chunkManager;
         private ChunkData _chunkData;
 
@@ -65,12 +65,12 @@ namespace Aeon
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z) + new Vector2I(x, z));
 
                     for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
                     {
-                        Vector3I globalPosition = new Vector3I(ChunkPosition.X, ChunkPosition.Y, ChunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
-                        BlockType blockType = terrainGenerator.GetBlockType(globalPosition, height);
+                        var globalPosition = GetGlobalPosition(new Vector3I(x, y, z));
+                        var blockType = terrainGenerator.GetBlockType(globalPosition, height);
 
                         SetBlock(new Vector3I(x, y, z), blockType);
                     }
@@ -123,16 +123,15 @@ namespace Aeon
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
-                    int localHeight = height - ChunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
-                    if (localHeight < -1 || localHeight > Configuration.CHUNK_DIMENSION.Y - 2) continue;
+                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z) + new Vector2I(x, z));
+                    if (height < 0 || height > Configuration.CHUNK_DIMENSION.Y - 2) continue;
 
-                    Vector3I blockBelowPosition = new Vector3I(x, localHeight, z);
+                    Vector3I blockBelowPosition = new Vector3I(x, height, z);
                     var blockBelow = IsInChunk(blockBelowPosition) ? GetBlock(blockBelowPosition) : _chunkManager.GetBlock(GetGlobalPosition(blockBelowPosition));
 
                     if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.2f)
                     {
-                        SetBlock(new Vector3I(x, localHeight + 1, z), BlockTypes.Instance.Get("short_grass"));
+                        SetBlock(new Vector3I(x, height + 1, z), BlockTypes.Instance.Get("short_grass"));
                     }
                 }
             }
@@ -147,17 +146,16 @@ namespace Aeon
                 {
                     if (random.NextDouble() > 0.02f) continue;
 
-                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
-                    int localHeight = height - ChunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
-                    if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
+                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Configuration.CHUNK_DIMENSION.X, Configuration.CHUNK_DIMENSION.Z) + new Vector2I(x, z));
+                    if (height < 0 || height > Configuration.CHUNK_DIMENSION.Y - 2) continue;
 
-                    var blockBelow = _chunkData.GetBlock(new Vector3I(x, localHeight, z));
+                    var blockBelow = _chunkData.GetBlock(new Vector3I(x, height, z));
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     int trunkHeight = random.Next(5, 10);
-                    SetBlock(new Vector3I(x, localHeight, z), BlockTypes.Instance.Get("dirt"));
-                    GenerateTreeTrunk(localHeight, trunkHeight, x, z);
-                    GenerateTreeLeaves(localHeight, trunkHeight, x, z);
+                    SetBlock(new Vector3I(x, height, z), BlockTypes.Instance.Get("dirt"));
+                    GenerateTreeTrunk(height, trunkHeight, x, z);
+                    GenerateTreeLeaves(height, trunkHeight, x, z);
                 }
             }
         }
@@ -204,7 +202,7 @@ namespace Aeon
 
         private Vector3I GetGlobalPosition(Vector3I localPosition)
         {
-            return new Vector3I(ChunkPosition.X, ChunkPosition.Y, ChunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
+            return new Vector3I(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION + localPosition;
         }
 
         public void SetChunkData(ChunkData chunkData)
@@ -306,7 +304,7 @@ namespace Aeon
 
         private Vector3I GetWorldPosition(Vector3I localPosition)
         {
-            return localPosition + ChunkPosition * Configuration.CHUNK_DIMENSION;
+            return localPosition + new Vector3I(ChunkPosition.X, 0, ChunkPosition.Y) * Configuration.CHUNK_DIMENSION;
         }
 
         private bool ShouldRender(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
@@ -378,12 +376,12 @@ namespace Aeon
             }
         }
 
-        public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
+        public void Initialize(ChunkManager chunkManager, Vector2I chunkPosition)
         {
             _chunkManager = chunkManager;
             ChunkPosition = chunkPosition;
 
-            Position = chunkPosition * Configuration.CHUNK_DIMENSION;
+            Position = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Configuration.CHUNK_DIMENSION;
         }
 
         public void BreakBlock(Vector3I localPosition)
