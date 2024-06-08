@@ -6,15 +6,15 @@ namespace Aeon
 {
     public partial class Chunk : StaticBody3D
     {
-        private SurfaceTool surfaceTool = new SurfaceTool();
+        private SurfaceTool surfaceTool;
         private Mesh mesh;
         private MeshInstance3D meshInstance;
 
-        private SurfaceTool transparentSurfaceTool = new SurfaceTool();
+        private SurfaceTool transparentSurfaceTool;
         private Mesh transparentMesh;
         private MeshInstance3D transparentMeshInstance;
 
-        private SurfaceTool collisionSurfaceTool = new SurfaceTool();
+        private SurfaceTool collisionSurfaceTool;
         private Shape3D collisionShape;
         private CollisionShape3D collisionShapeNode;
 
@@ -261,12 +261,15 @@ namespace Aeon
 
         public void Render()
         {
+            surfaceTool = new SurfaceTool();
             surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             surfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
+            transparentSurfaceTool = new SurfaceTool();
             transparentSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             transparentSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
+            collisionSurfaceTool = new SurfaceTool();
             collisionSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
             collisionSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
 
@@ -289,6 +292,10 @@ namespace Aeon
 
             collisionSurfaceTool.GenerateNormals(false);
             collisionShape = collisionSurfaceTool.Commit().CreateTrimeshShape();
+
+            surfaceTool = null;
+            transparentSurfaceTool = null;
+            collisionSurfaceTool = null;
 
             CallThreadSafe("AfterRender");
         }
@@ -359,7 +366,7 @@ namespace Aeon
             }
         }
 
-        private void RenderFace(Face face, Vector3I localPosition, bool transparent = false, bool hasCollision = true)
+        private void RenderFace(Face face, Vector3I localPosition, BlockType blockType)
         {
             Vector2 uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
             float height = 1.0f / BlockTextures.Instance.size.Y;
@@ -369,7 +376,7 @@ namespace Aeon
             Vector2 uvb = uvOffset + new Vector2(face.UV[0] * width, face.UV[3] * height);
             Vector2 uvc = uvOffset + new Vector2(face.UV[2] * width, face.UV[3] * height);
 
-            var st = transparent ? transparentSurfaceTool : surfaceTool;
+            var st = blockType.Transparent ? transparentSurfaceTool : surfaceTool;
 
             Vector3 a = face.Vertices[0] + localPosition;
             Vector3 b = face.Vertices[1] + localPosition;
@@ -377,7 +384,7 @@ namespace Aeon
 
             st.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
 
-            if (hasCollision)
+            if (blockType.HasCollision)
             {
                 collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
             }
@@ -388,7 +395,7 @@ namespace Aeon
                 Vector3 d = face.Vertices[3] + localPosition;
                 st.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
 
-                if (hasCollision)
+                if (blockType.HasCollision)
                 {
                     collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
                 }
