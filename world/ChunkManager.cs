@@ -48,9 +48,9 @@ namespace Aeon
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
             List<Vector3I> chunksToRender = chunks.Values
-                .OrderBy(chunk => ((Vector3)chunk.chunkPosition).DistanceTo(playerChunkPosition))
-                .Where(chunk => chunk.generated && !chunk.rendered && CanRenderChunk(chunk.chunkPosition))
-                .Select(chunk => chunk.chunkPosition)
+                .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition))
+                .Where(chunk => chunk.IsGenerated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
+                .Select(chunk => chunk.ChunkPosition)
                 .ToList();
 
             GenerateChunks(playerChunkPosition, terrainGenerator);
@@ -116,7 +116,7 @@ namespace Aeon
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        if (!chunk.generated)
+                        if (!chunk.IsGenerated)
                         {
                             chunk.GenerateBlocks(terrainGenerator, WorldPresets.Instance.Get("default"));
                         }
@@ -172,19 +172,19 @@ namespace Aeon
 
             return
                 chunks.ContainsKey(chunkPosition) &&
-                chunks[chunkPosition].generated &&
+                chunks[chunkPosition].IsGenerated &&
                 chunks.ContainsKey(northChunkPosition) &&
-                chunks[northChunkPosition].generated &&
+                chunks[northChunkPosition].IsGenerated &&
                 chunks.ContainsKey(eastChunkPosition) &&
-                chunks[eastChunkPosition].generated &&
+                chunks[eastChunkPosition].IsGenerated &&
                 chunks.ContainsKey(southChunkPosition) &&
-                chunks[southChunkPosition].generated &&
+                chunks[southChunkPosition].IsGenerated &&
                 chunks.ContainsKey(westChunkPosition) &&
-                chunks[westChunkPosition].generated &&
+                chunks[westChunkPosition].IsGenerated &&
                 chunks.ContainsKey(upChunkPosition) &&
-                chunks[upChunkPosition].generated &&
+                chunks[upChunkPosition].IsGenerated &&
                 chunks.ContainsKey(downChunkPosition) &&
-                chunks[downChunkPosition].generated;
+                chunks[downChunkPosition].IsGenerated;
         }
 
         private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)

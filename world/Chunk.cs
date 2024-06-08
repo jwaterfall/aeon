@@ -6,26 +6,26 @@ namespace Aeon
 {
     public partial class Chunk : StaticBody3D
     {
-        private SurfaceTool surfaceTool;
-        private Mesh mesh;
-        private MeshInstance3D meshInstance;
+        private SurfaceTool _surfaceTool;
+        private MeshInstance3D _meshInstance;
+        private ArrayMesh _generatedMesh;
 
-        private SurfaceTool transparentSurfaceTool;
-        private Mesh transparentMesh;
-        private MeshInstance3D transparentMeshInstance;
+        private SurfaceTool _transparentSurfaceTool;
+        private MeshInstance3D _transparentMeshInstance;
+        private ArrayMesh _generatedTransparentMesh;
 
-        private SurfaceTool collisionSurfaceTool;
-        private Shape3D collisionShape;
-        private CollisionShape3D collisionShapeNode;
+        private SurfaceTool _collisionSurfaceTool;
+        private Shape3D _collisionShape;
+        private CollisionShape3D _collisionShapeNode;
 
-        public Vector3I chunkPosition;
-        private ChunkManager chunkManager;
+        public Vector3I ChunkPosition { get; private set; }
+        private ChunkManager _chunkManager;
         private ChunkData _chunkData;
 
-        public bool generated = false;
-        public bool rendered = false;
+        public bool IsGenerated { get; private set; } = false;
+        public bool IsRendered { get; private set; } = false;
 
-        private Dictionary<Direction, Vector3I> faceDirections = new()
+        private static readonly Dictionary<Direction, Vector3I> FaceDirections = new()
         {
             { Direction.Up, Vector3I.Up },
             { Direction.Down, Vector3I.Down },
@@ -35,26 +35,26 @@ namespace Aeon
             { Direction.East, Vector3I.Back }
         };
 
-        private Dictionary<Direction, Direction> inverseDirections = new()
+        private static readonly Dictionary<Direction, Direction> InverseDirections = new()
         {
             { Direction.Up, Direction.Down },
             { Direction.Down, Direction.Up },
             { Direction.North, Direction.South },
             { Direction.South, Direction.North },
             { Direction.West, Direction.East },
-            { Direction.East, Direction.West },
+            { Direction.East, Direction.West }
         };
 
         public override void _Ready()
         {
-            meshInstance = new();
-            AddChild(meshInstance);
+            _meshInstance = new MeshInstance3D();
+            AddChild(_meshInstance);
 
-            transparentMeshInstance = new();
-            AddChild(transparentMeshInstance);
+            _transparentMeshInstance = new MeshInstance3D();
+            AddChild(_transparentMeshInstance);
 
-            collisionShapeNode = new();
-            AddChild(collisionShapeNode);
+            _collisionShapeNode = new CollisionShape3D();
+            AddChild(_collisionShapeNode);
 
             _chunkData = new StandardChunkData(Configuration.CHUNK_DIMENSION);
         }
@@ -65,156 +65,146 @@ namespace Aeon
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
 
                     for (int y = 0; y < Configuration.CHUNK_DIMENSION.Y; y++)
                     {
-                        var globalPosition = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
-                        var blockType = terrainGenerator.GetBlockType(globalPosition, height);
+                        Vector3I globalPosition = new Vector3I(ChunkPosition.X, ChunkPosition.Y, ChunkPosition.Z) * Configuration.CHUNK_DIMENSION + new Vector3I(x, y, z);
+                        BlockType blockType = terrainGenerator.GetBlockType(globalPosition, height);
 
                         SetBlock(new Vector3I(x, y, z), blockType);
                     }
                 }
             }
 
-            var random = new Random();
+            GenerateOres(worldPreset, terrainGenerator);
+            GenerateGrass(terrainGenerator);
+            GenerateTrees(terrainGenerator);
 
+            _chunkData.Optimize(this);
+            IsGenerated = true;
+        }
+
+        private void GenerateOres(WorldPreset worldPreset, TerrainGenerator terrainGenerator)
+        {
+            var random = new Random();
             foreach (var ore in worldPreset.Ores)
             {
-                // Respect max height and add size
-                // Block, Size, Frequency, MinHeight, MaxHeight
                 for (int i = 0; i < ore.Frequency; i++)
                 {
-                    var localStartPosition = new Vector3I(
+                    Vector3I localStartPosition = new Vector3I(
                         random.Next(0, Configuration.CHUNK_DIMENSION.X),
                         random.Next(0, Configuration.CHUNK_DIMENSION.Y),
                         random.Next(0, Configuration.CHUNK_DIMENSION.Z)
                     );
 
-                    var globalStartPosition = GetGlobalPosition(localStartPosition);
-
+                    Vector3I globalStartPosition = GetGlobalPosition(localStartPosition);
                     if (globalStartPosition.Y < ore.MinHeight || globalStartPosition.Y > ore.MaxHeight) continue;
 
                     var veinPositions = new List<Vector3I>();
-
                     for (int j = 0; j < ore.Size; j++)
                     {
-                        // Calculate new offsets relative to the previous position
-                        var xOffset = random.Next(-1, 2); // -1, 0, or 1
-                        var yOffset = random.Next(-1, 2);
-                        var zOffset = random.Next(-1, 2);
-
-                        var previousPosition = (j > 0) ? veinPositions[j - 1] : localStartPosition;
-
-                        var localPosition = new Vector3I(
-                            previousPosition.X + xOffset,
-                            previousPosition.Y + yOffset,
-                            previousPosition.Z + zOffset
-                        );
-
+                        Vector3I localPosition = veinPositions.Count == 0 ? localStartPosition : veinPositions[j - 1] + new Vector3I(random.Next(-1, 2), random.Next(-1, 2), random.Next(-1, 2));
                         veinPositions.Add(localPosition);
 
-                        if (!IsInChunk(localPosition)) continue;
-
-                        SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), false, BlockTypes.Instance.Get("stone"));
+                        if (IsInChunk(localPosition))
+                        {
+                            SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), false, BlockTypes.Instance.Get("stone"));
+                        }
                     }
                 }
             }
+        }
 
-            // Add grass
+        private void GenerateGrass(TerrainGenerator terrainGenerator)
+        {
+            var random = new Random();
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
-
-                    var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
+                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+                    int localHeight = height - ChunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
                     if (localHeight < -1 || localHeight > Configuration.CHUNK_DIMENSION.Y - 2) continue;
 
-                    var blockBelowPosition = new Vector3I(x, localHeight, z);
-                    var blockBelow = IsInChunk(blockBelowPosition) ? GetBlock(blockBelowPosition) : chunkManager.GetBlock(GetGlobalPosition(blockBelowPosition));
+                    Vector3I blockBelowPosition = new Vector3I(x, localHeight, z);
+                    var blockBelow = IsInChunk(blockBelowPosition) ? GetBlock(blockBelowPosition) : _chunkManager.GetBlock(GetGlobalPosition(blockBelowPosition));
 
-                    if (blockBelow == null)
+                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.2f)
                     {
-                        // Todo, add grass and other things in second pass after neighbors have been generated
-                        continue;
+                        SetBlock(new Vector3I(x, localHeight + 1, z), BlockTypes.Instance.Get("short_grass"));
                     }
-
-                    if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
-
-                    if (random.NextDouble() > 0.2f) continue;
-                    SetBlock(new Vector3I(x, localHeight + 1, z), BlockTypes.Instance.Get("short_grass"));
                 }
             }
+        }
 
-            //Add trees
+        private void GenerateTrees(TerrainGenerator terrainGenerator)
+        {
+            var random = new Random();
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
                 for (int z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
                 {
-                    var randomNumber = random.NextDouble();
-                    if (randomNumber > 0.02f) continue;
+                    if (random.NextDouble() > 0.02f) continue;
 
-                    var height = terrainGenerator.GetHeight(new Vector2I(chunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, chunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
-
-                    var localHeight = height - chunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
+                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X * Configuration.CHUNK_DIMENSION.X + x, ChunkPosition.Z * Configuration.CHUNK_DIMENSION.Z + z));
+                    int localHeight = height - ChunkPosition.Y * Configuration.CHUNK_DIMENSION.Y;
                     if (localHeight < 0 || localHeight >= Configuration.CHUNK_DIMENSION.Y) continue;
 
                     var blockBelow = _chunkData.GetBlock(new Vector3I(x, localHeight, z));
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
-                    var trunkHeight = random.Next(5, 10);
-
-                    // Kill the grass
+                    int trunkHeight = random.Next(5, 10);
                     SetBlock(new Vector3I(x, localHeight, z), BlockTypes.Instance.Get("dirt"));
+                    GenerateTreeTrunk(localHeight, trunkHeight, x, z);
+                    GenerateTreeLeaves(localHeight, trunkHeight, x, z);
+                }
+            }
+        }
 
-                    // Trunk
-                    for (int y = 1; y <= trunkHeight; y++)
-                    {
-                        var localPosition = new Vector3I(x, localHeight + y, z);
-                        SetBlock(localPosition, BlockTypes.Instance.Get("spruce_log"));
-                    }
+        private void GenerateTreeTrunk(int localHeight, int trunkHeight, int x, int z)
+        {
+            for (int y = 1; y <= trunkHeight; y++)
+            {
+                SetBlock(new Vector3I(x, localHeight + y, z), BlockTypes.Instance.Get("spruce_log"));
+            }
+        }
 
-                    // Brim
-                    var brimHeight = random.Next(1, 3);
-                    int brimWidth = 2;
-                    for (int y = 1; y <= brimHeight; y++)
-                    {
-                        for (int xOffset = -brimWidth; xOffset <= brimWidth; xOffset++)
-                        {
-                            for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
-                            {
-                                var localPosition = new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset);
-                                SetBlock(localPosition, BlockTypes.Instance.Get("spruce_leaves"));
-                            }
-                        }
-                    }
+        private void GenerateTreeLeaves(int localHeight, int trunkHeight, int x, int z)
+        {
+            var random = new Random();
+            int brimHeight = random.Next(1, 3);
+            int brimWidth = 2;
 
-                    // Top
-                    var topHeight = random.Next(1, 2);
-                    int topWidth = 1;
-                    for (int y = 1; y <= topHeight; y++)
+            for (int y = 1; y <= brimHeight; y++)
+            {
+                for (int xOffset = -brimWidth; xOffset <= brimWidth; xOffset++)
+                {
+                    for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
                     {
-                        for (int xOffset = -topWidth; xOffset <= topWidth; xOffset++)
-                        {
-                            for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
-                            {
-                                var localPosition = new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset);
-                                SetBlock(localPosition, BlockTypes.Instance.Get("spruce_leaves"));
-                            }
-                        }
+                        SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }
 
-            _chunkData.Optimize(this);
+            int topHeight = random.Next(1, 2);
+            int topWidth = 1;
 
-            generated = true;
+            for (int y = 1; y <= topHeight; y++)
+            {
+                for (int xOffset = -topWidth; xOffset <= topWidth; xOffset++)
+                {
+                    for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
+                    {
+                        SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
+                    }
+                }
+            }
         }
 
         private Vector3I GetGlobalPosition(Vector3I localPosition)
         {
-            return new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
+            return new Vector3I(ChunkPosition.X, ChunkPosition.Y, ChunkPosition.Z) * Configuration.CHUNK_DIMENSION + localPosition;
         }
 
         public void SetChunkData(ChunkData chunkData)
@@ -224,16 +214,9 @@ namespace Aeon
 
         private void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
         {
-            if (!IsInChunk(localPosition))
-            {
-                //throw new ArgumentOutOfRangeException("localPosition");
-                return;
-            }
+            if (!IsInChunk(localPosition)) return;
 
-            if (replaces != null && _chunkData.GetBlock(localPosition) != replaces)
-            {
-                return;
-            }
+            if (replaces != null && _chunkData.GetBlock(localPosition) != replaces) return;
 
             _chunkData.SetBlock(this, localPosition, blockType);
 
@@ -245,13 +228,9 @@ namespace Aeon
 
         private bool IsInChunk(Vector3I localPosition)
         {
-            return
-                localPosition.X >= 0 &&
-                localPosition.X < Configuration.CHUNK_DIMENSION.X &&
-                localPosition.Y >= 0 &&
-                localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
-                localPosition.Z >= 0 &&
-                localPosition.Z < Configuration.CHUNK_DIMENSION.Z;
+            return localPosition.X >= 0 && localPosition.X < Configuration.CHUNK_DIMENSION.X &&
+                   localPosition.Y >= 0 && localPosition.Y < Configuration.CHUNK_DIMENSION.Y &&
+                   localPosition.Z >= 0 && localPosition.Z < Configuration.CHUNK_DIMENSION.Z;
         }
 
         public BlockType GetBlock(Vector3I localPosition)
@@ -261,17 +240,7 @@ namespace Aeon
 
         public void Render()
         {
-            surfaceTool = new SurfaceTool();
-            surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
-            surfaceTool.SetSmoothGroup(UInt32.MaxValue);
-
-            transparentSurfaceTool = new SurfaceTool();
-            transparentSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
-            transparentSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
-
-            collisionSurfaceTool = new SurfaceTool();
-            collisionSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
-            collisionSurfaceTool.SetSmoothGroup(UInt32.MaxValue);
+            InitializeSurfaceTools();
 
             for (int x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
             {
@@ -284,77 +253,83 @@ namespace Aeon
                 }
             }
 
-            surfaceTool.GenerateNormals(false);
-            mesh = surfaceTool.Commit();
+            CommitSurfaceTools();
+            CallDeferred(nameof(AfterRender));
+        }
 
-            transparentSurfaceTool.GenerateNormals(false);
-            transparentMesh = transparentSurfaceTool.Commit();
+        private void InitializeSurfaceTools()
+        {
+            _surfaceTool = new SurfaceTool();
+            _surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+            _surfaceTool.SetSmoothGroup(uint.MaxValue);
 
-            collisionSurfaceTool.GenerateNormals(false);
-            collisionShape = collisionSurfaceTool.Commit().CreateTrimeshShape();
+            _transparentSurfaceTool = new SurfaceTool();
+            _transparentSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+            _transparentSurfaceTool.SetSmoothGroup(uint.MaxValue);
 
-            surfaceTool = null;
-            transparentSurfaceTool = null;
-            collisionSurfaceTool = null;
+            _collisionSurfaceTool = new SurfaceTool();
+            _collisionSurfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+            _collisionSurfaceTool.SetSmoothGroup(uint.MaxValue);
+        }
 
-            CallThreadSafe("AfterRender");
+        private void CommitSurfaceTools()
+        {
+            _surfaceTool.GenerateNormals(false);
+            _generatedMesh = _surfaceTool.Commit();
+
+            _transparentSurfaceTool.GenerateNormals(false);
+            _generatedTransparentMesh = _transparentSurfaceTool.Commit();
+
+            _collisionSurfaceTool.GenerateNormals(false);
+            _collisionShape = _collisionSurfaceTool.Commit().CreateTrimeshShape();
+
+            _surfaceTool.Dispose();
+            _transparentSurfaceTool.Dispose();
+            _collisionSurfaceTool.Dispose();
+
+            _surfaceTool = null;
+            _transparentSurfaceTool = null;
+            _collisionSurfaceTool = null;
         }
 
         public void AfterRender()
         {
-            meshInstance.MaterialOverride = BlockTextures.Instance.material;
-            meshInstance.Mesh = mesh;
+            _meshInstance.Mesh = _generatedMesh;
+            _transparentMeshInstance.Mesh = _generatedTransparentMesh;
+            _collisionShapeNode.Shape = _collisionShape;
 
-            transparentMeshInstance.MaterialOverride = BlockTextures.Instance.transparentMaterial;
-            transparentMeshInstance.Mesh = transparentMesh;
+            _meshInstance.MaterialOverride = BlockTextures.Instance.material;
+            _transparentMeshInstance.MaterialOverride = BlockTextures.Instance.transparentMaterial;
 
-            collisionShapeNode.Shape = collisionShape;
-
-            rendered = true;
+            IsRendered = true;
         }
 
         private Vector3I GetWorldPosition(Vector3I localPosition)
         {
-            return localPosition + chunkPosition * Configuration.CHUNK_DIMENSION;
+            return localPosition + ChunkPosition * Configuration.CHUNK_DIMENSION;
         }
 
         private bool ShouldRender(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
         {
-            var blockType = IsOutsideChunk(localPosition)
-                ? chunkManager.GetBlock(GetWorldPosition(localPosition))
+            var blockType = !IsInChunk(localPosition)
+                ? _chunkManager.GetBlock(GetWorldPosition(localPosition))
                 : GetBlock(localPosition);
 
-            if (!blockType.Occludes.Contains(faceToCheck))
-            {
-                return true;
-            }
-
-            return blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf);
-        }
-
-        private bool IsOutsideChunk(Vector3I localPosition)
-        {
-            return localPosition.X < 0 || localPosition.X >= Configuration.CHUNK_DIMENSION.X || localPosition.Y < 0 || localPosition.Y >= Configuration.CHUNK_DIMENSION.Y || localPosition.Z < 0 || localPosition.Z >= Configuration.CHUNK_DIMENSION.Z;
+            return blockType.Occludes.Contains(faceToCheck) == false || (blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf));
         }
 
         private void RenderBlock(Vector3I localPosition)
         {
             var blockType = _chunkData.GetBlock(localPosition);
 
-            if (blockType.Name == "air")
-            {
-                return;
-            }
+            if (blockType.Name == "air") return;
 
-            for (int i = 0; i < blockType.Faces.Count; i++)
+            foreach (var face in blockType.Faces)
             {
-                var face = blockType.Faces[i];
-
                 if (face.OccludedBy.HasValue)
                 {
-
-                    var directionOfBlockToCheck = faceDirections[face.OccludedBy.Value];
-                    var faceToCheck = inverseDirections[face.OccludedBy.Value];
+                    var directionOfBlockToCheck = FaceDirections[face.OccludedBy.Value];
+                    var faceToCheck = InverseDirections[face.OccludedBy.Value];
 
                     if (!ShouldRender(localPosition + directionOfBlockToCheck, faceToCheck, blockType))
                     {
@@ -368,44 +343,45 @@ namespace Aeon
 
         private void RenderFace(Face face, Vector3I localPosition, BlockType blockType)
         {
-            Vector2 uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
-            float height = 1.0f / BlockTextures.Instance.size.Y;
-            float width = 1.0f / BlockTextures.Instance.size.X;
+            var uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
+            var height = 1.0f / BlockTextures.Instance.size.Y;
+            var width = 1.0f / BlockTextures.Instance.size.X;
 
-            Vector2 uva = uvOffset + new Vector2(face.UV[0] * width, face.UV[1] * height);
-            Vector2 uvb = uvOffset + new Vector2(face.UV[0] * width, face.UV[3] * height);
-            Vector2 uvc = uvOffset + new Vector2(face.UV[2] * width, face.UV[3] * height);
+            var uva = uvOffset + new Vector2(face.UV[0] * width, face.UV[1] * height);
+            var uvb = uvOffset + new Vector2(face.UV[0] * width, face.UV[3] * height);
+            var uvc = uvOffset + new Vector2(face.UV[2] * width, face.UV[3] * height);
 
-            var st = blockType.Transparent ? transparentSurfaceTool : surfaceTool;
+            var st = blockType.Transparent ? _transparentSurfaceTool : _surfaceTool;
 
-            Vector3 a = face.Vertices[0] + localPosition;
-            Vector3 b = face.Vertices[1] + localPosition;
-            Vector3 c = face.Vertices[2] + localPosition;
+            var a = face.Vertices[0] + localPosition;
+            var b = face.Vertices[1] + localPosition;
+            var c = face.Vertices[2] + localPosition;
 
-            st.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
+            st.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc });
 
             if (blockType.HasCollision)
             {
-                collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, b, c }, new Vector2[] { uva, uvb, uvc });
+                _collisionSurfaceTool.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc });
             }
 
             if (face.Vertices.Count == 4)
             {
-                Vector2 uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
-                Vector3 d = face.Vertices[3] + localPosition;
-                st.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+                var uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
+                var d = face.Vertices[3] + localPosition;
+
+                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd });
 
                 if (blockType.HasCollision)
                 {
-                    collisionSurfaceTool.AddTriangleFan(new Vector3[] { a, c, d }, new Vector2[] { uva, uvc, uvd });
+                    _collisionSurfaceTool.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd });
                 }
             }
         }
 
         public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
         {
-            this.chunkManager = chunkManager;
-            this.chunkPosition = chunkPosition;
+            _chunkManager = chunkManager;
+            ChunkPosition = chunkPosition;
 
             Position = chunkPosition * Configuration.CHUNK_DIMENSION;
         }
