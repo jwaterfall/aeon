@@ -1,5 +1,6 @@
 ﻿using Godot;
 using System;
+using System.Linq;
 
 namespace Aeon
 {
@@ -22,7 +23,7 @@ namespace Aeon
         public abstract void Optimize(Chunk chunk);
     }
 
-    abstract class ChunkLayerData
+    public abstract class ChunkLayerData
     {
         protected readonly Vector2I _dimensions;
         protected readonly int _layerIndex;
@@ -43,10 +44,9 @@ namespace Aeon
         public abstract void Optimize(StandardChunkData chunkData);
     }
 
-
-    class StandardChunkLayerData : ChunkLayerData
+    public class StandardChunkLayerData : ChunkLayerData
     {
-        private byte[] _blocks;
+        private readonly byte[] _blocks;
 
         public StandardChunkLayerData(Vector2I dimensions, byte[] blocks, int layerIndex) : base(dimensions, layerIndex)
         {
@@ -70,20 +70,17 @@ namespace Aeon
 
         public override void Optimize(StandardChunkData chunkData)
         {
-            //var isSingleBlock = Array.TrueForAll(_blocks, blockId => blockId == _blocks[0]);
-
-            //if (isSingleBlock)
-            //{
-            //    var block = BlockTypes.Instance.Get(_blocks[0]);
-            //    chunkData.SetLayerData(_dimensions.Y, new SingleBlockChunkLayerData(_dimensions, block, _layerIndex));
-            //}
+            if (_blocks.All(blockId => blockId == _blocks[0]))
+            {
+                var block = BlockTypes.Instance.Get(_blocks[0]);
+                chunkData.SetLayerData(_layerIndex, new SingleBlockChunkLayerData(_dimensions, block, _layerIndex));
+            }
         }
     }
 
-
-    class SingleBlockChunkLayerData : ChunkLayerData
+    public class SingleBlockChunkLayerData : ChunkLayerData
     {
-        private BlockType _block;
+        private readonly BlockType _block;
 
         public SingleBlockChunkLayerData(Vector2I dimensions, BlockType block, int layerIndex) : base(dimensions, layerIndex)
         {
@@ -97,13 +94,7 @@ namespace Aeon
 
         public override void SetBlock(StandardChunkData chunkData, Vector2I localPosition, BlockType blockType)
         {
-            var blocks = new byte[_dimensions.X * _dimensions.Y];
-
-            for (int i = 0; i < blocks.Length; i++)
-            {
-                blocks[i] = blockType.Id;
-            }
-
+            var blocks = Enumerable.Repeat(_block.Id, _dimensions.X * _dimensions.Y).ToArray();
             blocks[GetIndex(localPosition)] = blockType.Id;
 
             chunkData.SetLayerData(_layerIndex, new StandardChunkLayerData(_dimensions, blocks, _layerIndex));
@@ -115,10 +106,9 @@ namespace Aeon
         }
     }
 
-
-    class StandardChunkData : ChunkData
+    public class StandardChunkData : ChunkData
     {
-        private ChunkLayerData[] _layers;
+        private readonly ChunkLayerData[] _layers;
 
         public StandardChunkData(Vector3I dimensions, ChunkLayerData[] layers) : base(dimensions)
         {
@@ -152,28 +142,26 @@ namespace Aeon
 
         public override void Optimize(Chunk chunk)
         {
-            var areAllSingleBlockLayers = Array.TrueForAll(_layers, layer => layer is SingleBlockChunkLayerData);
-            var firstLayerBlock = (_layers[0]).GetBlock(new Vector2I(0, 0));
-            var isSingleBlock = areAllSingleBlockLayers &&
-                Array.TrueForAll(_layers, layer => ((SingleBlockChunkLayerData)layer).GetBlock(new Vector2I(0, 0)) == firstLayerBlock);
-
-            if (isSingleBlock)
+            if (_layers.OfType<SingleBlockChunkLayerData>().Count() == _layers.Length)
             {
-                chunk.SetChunkData(new SingleBlockChunkData(_dimensions, firstLayerBlock));
-            }
-            else
-            {
-                foreach (var layer in _layers)
+                var firstLayerBlock = _layers[0].GetBlock(new Vector2I(0, 0));
+                if (_layers.All(layer => ((SingleBlockChunkLayerData)layer).GetBlock(new Vector2I(0, 0)) == firstLayerBlock))
                 {
-                    layer.Optimize(this);
+                    chunk.SetChunkData(new SingleBlockChunkData(_dimensions, firstLayerBlock));
+                    return;
                 }
+            }
+
+            foreach (var layer in _layers)
+            {
+                layer.Optimize(this);
             }
         }
     }
 
-    class SingleBlockChunkData : ChunkData
+    public class SingleBlockChunkData : ChunkData
     {
-        private BlockType _block;
+        private readonly BlockType _block;
 
         public SingleBlockChunkData(Vector3I dimensions, BlockType block) : base(dimensions)
         {
@@ -195,13 +183,7 @@ namespace Aeon
                 layers[y] = new SingleBlockChunkLayerData(new Vector2I(_dimensions.X, _dimensions.Z), blockType, y);
             }
 
-            var modifiedLayerBlocks = new byte[_dimensions.X * _dimensions.Z];
-
-            for (int i = 0; i < modifiedLayerBlocks.Length; i++)
-            {
-                modifiedLayerBlocks[i] = blockType.Id;
-            }
-
+            var modifiedLayerBlocks = Enumerable.Repeat(blockType.Id, _dimensions.X * _dimensions.Z).ToArray();
             modifiedLayerBlocks[(localPosition.Z * _dimensions.X) + localPosition.X] = blockType.Id;
             layers[localPosition.Y] = new StandardChunkLayerData(new Vector2I(_dimensions.X, _dimensions.Z), modifiedLayerBlocks, localPosition.Y);
 
