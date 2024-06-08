@@ -10,20 +10,20 @@ namespace Aeon
 {
     public partial class ChunkManager : Node3D
     {
-        private PackedScene chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
-        private ConcurrentDictionary<Vector3I, Chunk> chunks = new();
-        private ConcurrentQueue<Vector3I> chunksToGenerate = new();
-        private ConcurrentDictionary<Vector3I, bool> loadedChunks = new();
-        private Task[] tasks = new Task[OS.GetProcessorCount() - 2];
-        private Task renderTask;
-        private Vector3I? lastPlayerChunkPosition;
+        private readonly PackedScene _chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
+        private readonly ConcurrentDictionary<Vector3I, Chunk> _chunks = new();
+        private ConcurrentQueue<Vector3I> _chunksToGenerate = new();
+        private Queue<Vector3I> _chunksToRemove = new();
+        private Task[] _tasks = new Task[OS.GetProcessorCount() - 2];
+        private Task _renderTask;
+        private Vector3I? _lastPlayerChunkPosition;
 
-        private Stopwatch renderingStopwatch = new Stopwatch();
-        private double totalGenerationTime = 0;
-        private double totalRenderingTime = 0;
-        private int generationCount = 0;
-        private int renderingCount = 0;
-        private double timeAccumulator = 0;
+        private readonly Stopwatch _renderingStopwatch = new();
+        private double _totalGenerationTime = 0;
+        private double _totalRenderingTime = 0;
+        private int _generationCount = 0;
+        private int _renderingCount = 0;
+        private double _timeAccumulator = 0;
 
         public override void _Ready()
         {
@@ -34,12 +34,12 @@ namespace Aeon
 
         public override void _Process(double delta)
         {
-            timeAccumulator += delta;
+            _timeAccumulator += delta;
 
-            if (timeAccumulator >= 5.0f)
+            if (_timeAccumulator >= 5.0f)
             {
                 LogAverages();
-                timeAccumulator = 0;
+                _timeAccumulator = 0;
             }
         }
 
@@ -47,7 +47,7 @@ namespace Aeon
         {
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
-            List<Vector3I> chunksToRender = chunks.Values
+            var chunksToRender = _chunks.Values
                 .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition))
                 .Where(chunk => chunk.IsGenerated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
                 .Select(chunk => chunk.ChunkPosition)
@@ -56,35 +56,45 @@ namespace Aeon
             GenerateChunks(playerChunkPosition, terrainGenerator);
             RenderChunks(chunksToRender);
 
-            if (lastPlayerChunkPosition != playerChunkPosition)
+            for (int i = 0; i < _chunksToRemove.Count; i++)
             {
-                lastPlayerChunkPosition = playerChunkPosition;
+                var chunkPosition = _chunksToRemove.Dequeue();
 
-                HashSet<Vector3I> nearbyChunkPositions = new(GetNearbyChunkPositions(playerChunkPosition));
+                if (_chunks.TryRemove(chunkPosition, out var chunk))
+                {
+                    chunk.QueueFree();
+                }
+                else
+                {
+                    _chunksToRemove.Enqueue(chunkPosition);
+                }
+            }
+
+            if (_lastPlayerChunkPosition != playerChunkPosition)
+            {
+                _lastPlayerChunkPosition = playerChunkPosition;
+
+                var nearbyChunkPositions = new HashSet<Vector3I>(GetNearbyChunkPositions(playerChunkPosition));
 
                 // Remove chunks that are no longer nearby
-                foreach (var chunkPosition in loadedChunks.Keys.Except(nearbyChunkPositions).ToList())
+                foreach (var chunkPosition in _chunks.Keys.Except(nearbyChunkPositions).ToList())
                 {
-                    if (loadedChunks.TryRemove(chunkPosition, out _))
+                    if (_chunks.TryRemove(chunkPosition, out var chunk))
                     {
-                        if (chunks.TryRemove(chunkPosition, out Chunk chunk))
-                        {
-                            chunk.QueueFree();
-                        }
-                        else
-                        {
-                            loadedChunks.TryAdd(chunkPosition, true);
-                        }
+                        chunk.QueueFree();
+                    }
+                    else
+                    {
+                        _chunksToRemove.Enqueue(chunkPosition);
                     }
                 }
 
                 // Add chunks that are now nearby
-                foreach (var chunkPosition in nearbyChunkPositions.Except(loadedChunks.Keys))
+                foreach (var chunkPosition in nearbyChunkPositions.Except(_chunks.Keys))
                 {
-                    if (!chunks.ContainsKey(chunkPosition) && !chunksToGenerate.Contains(chunkPosition))
+                    if (!_chunks.ContainsKey(chunkPosition) && !_chunksToGenerate.Contains(chunkPosition))
                     {
-                        chunksToGenerate.Enqueue(chunkPosition);
-                        loadedChunks[chunkPosition] = true;
+                        _chunksToGenerate.Enqueue(chunkPosition);
                     }
                 }
             }
@@ -92,26 +102,26 @@ namespace Aeon
 
         private void GenerateChunks(Vector3I playerChunkPosition, TerrainGenerator terrainGenerator)
         {
-            var sortedChunksToGenerate = chunksToGenerate
+            var sortedChunksToGenerate = _chunksToGenerate
                 .OrderBy(chunkPosition => ((Vector3)chunkPosition).DistanceTo(playerChunkPosition))
                 .ToList();
 
-            for (int i = 0; i < tasks.Length; i++)
+            for (int i = 0; i < _tasks.Length; i++)
             {
-                Task task = tasks[i];
+                var task = _tasks[i];
                 if (sortedChunksToGenerate.Count > 0 && (task == null || task.IsCompleted))
                 {
-                    Vector3I chunkPosition = sortedChunksToGenerate[0];
+                    var chunkPosition = sortedChunksToGenerate[0];
                     sortedChunksToGenerate.RemoveAt(0);
-                    chunksToGenerate = new ConcurrentQueue<Vector3I>(sortedChunksToGenerate); // Update the queue
+                    _chunksToGenerate = new ConcurrentQueue<Vector3I>(sortedChunksToGenerate); // Update the queue
 
-                    Chunk chunk = chunkScene.Instantiate<Chunk>();
+                    var chunk = _chunkScene.Instantiate<Chunk>();
                     chunk.Initialize(this, chunkPosition);
                     AddChild(chunk);
 
-                    chunks[chunkPosition] = chunk;
+                    _chunks[chunkPosition] = chunk;
 
-                    tasks[i] = Task.Run(() =>
+                    _tasks[i] = Task.Run(() =>
                     {
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
@@ -125,8 +135,8 @@ namespace Aeon
 
                         lock (this)
                         {
-                            totalGenerationTime += stopwatch.Elapsed.TotalMilliseconds;
-                            generationCount++;
+                            _totalGenerationTime += stopwatch.Elapsed.TotalMilliseconds;
+                            _generationCount++;
                         }
                     });
                 }
@@ -135,21 +145,21 @@ namespace Aeon
 
         private void RenderChunks(List<Vector3I> chunksToRender)
         {
-            if (chunksToRender.Count > 0 && (renderTask == null || renderTask.IsCompleted))
+            if (chunksToRender.Count > 0 && (_renderTask == null || _renderTask.IsCompleted))
             {
                 var chunkPosition = chunksToRender[0];
                 chunksToRender.RemoveAt(0);
 
-                renderTask = Task.Run(() =>
+                _renderTask = Task.Run(() =>
                 {
-                    renderingStopwatch.Restart();
+                    _renderingStopwatch.Restart();
                     RenderChunk(chunkPosition);
-                    renderingStopwatch.Stop();
+                    _renderingStopwatch.Stop();
 
                     lock (this)
                     {
-                        totalRenderingTime += renderingStopwatch.Elapsed.TotalMilliseconds;
-                        renderingCount++;
+                        _totalRenderingTime += _renderingStopwatch.Elapsed.TotalMilliseconds;
+                        _renderingCount++;
                     }
                 });
             }
@@ -157,7 +167,7 @@ namespace Aeon
 
         private void RenderChunk(Vector3I chunkPosition)
         {
-            var chunk = chunks[chunkPosition];
+            var chunk = _chunks[chunkPosition];
             chunk.Render();
         }
 
@@ -171,20 +181,20 @@ namespace Aeon
             var downChunkPosition = chunkPosition + Vector3I.Down;
 
             return
-                chunks.ContainsKey(chunkPosition) &&
-                chunks[chunkPosition].IsGenerated &&
-                chunks.ContainsKey(northChunkPosition) &&
-                chunks[northChunkPosition].IsGenerated &&
-                chunks.ContainsKey(eastChunkPosition) &&
-                chunks[eastChunkPosition].IsGenerated &&
-                chunks.ContainsKey(southChunkPosition) &&
-                chunks[southChunkPosition].IsGenerated &&
-                chunks.ContainsKey(westChunkPosition) &&
-                chunks[westChunkPosition].IsGenerated &&
-                chunks.ContainsKey(upChunkPosition) &&
-                chunks[upChunkPosition].IsGenerated &&
-                chunks.ContainsKey(downChunkPosition) &&
-                chunks[downChunkPosition].IsGenerated;
+                _chunks.ContainsKey(chunkPosition) &&
+                _chunks[chunkPosition].IsGenerated &&
+                _chunks.ContainsKey(northChunkPosition) &&
+                _chunks[northChunkPosition].IsGenerated &&
+                _chunks.ContainsKey(eastChunkPosition) &&
+                _chunks[eastChunkPosition].IsGenerated &&
+                _chunks.ContainsKey(southChunkPosition) &&
+                _chunks[southChunkPosition].IsGenerated &&
+                _chunks.ContainsKey(westChunkPosition) &&
+                _chunks[westChunkPosition].IsGenerated &&
+                _chunks.ContainsKey(upChunkPosition) &&
+                _chunks[upChunkPosition].IsGenerated &&
+                _chunks.ContainsKey(downChunkPosition) &&
+                _chunks[downChunkPosition].IsGenerated;
         }
 
         private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)
@@ -204,7 +214,7 @@ namespace Aeon
                         }
                     }
                 }
-            }   
+            }
         }
 
         public BlockType GetBlock(Vector3I worldPosition)
@@ -212,9 +222,9 @@ namespace Aeon
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
-            if (chunks.ContainsKey(chunkPosition))
+            if (_chunks.ContainsKey(chunkPosition))
             {
-                return chunks[chunkPosition].GetBlock(localPosition);
+                return _chunks[chunkPosition].GetBlock(localPosition);
             }
 
             return null;
@@ -248,7 +258,7 @@ namespace Aeon
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
-            chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get(block));
+            _chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get(block));
             RenderChunk(chunkPosition);
 
             if (localPosition.X < 1)
@@ -279,15 +289,15 @@ namespace Aeon
 
         private void LogAverages()
         {
-            if (generationCount > 0)
+            if (_generationCount > 0)
             {
-                double averageGenerationTime = totalGenerationTime / generationCount;
+                var averageGenerationTime = _totalGenerationTime / _generationCount;
                 GD.Print($"Average Generation Time: {averageGenerationTime} ms");
             }
 
-            if (renderingCount > 0)
+            if (_renderingCount > 0)
             {
-                double averageRenderingTime = totalRenderingTime / renderingCount;
+                var averageRenderingTime = _totalRenderingTime / _renderingCount;
                 GD.Print($"Average Rendering Time: {averageRenderingTime} ms");
             }
         }
