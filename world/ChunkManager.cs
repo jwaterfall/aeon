@@ -65,6 +65,11 @@ namespace Aeon
 
             GenerateChunks(playerChunkPosition, terrainGenerator);
 
+            foreach (var chunk in _chunks.Values)
+            {
+                chunk.Update();
+            }
+
             for (int i = 0; i < _chunksToRemove.Count; i++)
             {
                 var chunkPosition = _chunksToRemove.Dequeue();
@@ -249,11 +254,10 @@ namespace Aeon
         public BlockType GetBlock(Vector3I worldPosition)
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
-            var localPosition = WorldToLocalPosition(worldPosition);
 
             if (_chunks.ContainsKey(chunkPosition))
             {
-                return _chunks[chunkPosition].GetBlock(localPosition);
+                return _chunks[chunkPosition].GetBlock(WorldToLocalPosition(worldPosition));
             }
 
             return null;
@@ -262,14 +266,24 @@ namespace Aeon
         public byte GetLightLevel(Vector3I worldPosition)
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                return _chunks[chunkPosition].GetLightLevel(WorldToLocalPosition(worldPosition));
+            }
+
+            return 0;
+        }
+
+        public void SetLightLevel(Vector3I worldPosition, byte lightLevel)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
 
             if (_chunks.ContainsKey(chunkPosition))
             {
-                return _chunks[chunkPosition].GetLightLevel(localPosition);
+                _chunks[chunkPosition].SetLightLevel(localPosition, lightLevel);
             }
-
-            return 0;
         }
 
         private Vector2I WorldToChunkPosition(Vector3 worldPosition)

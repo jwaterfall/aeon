@@ -11,6 +11,8 @@ uniform ivec3 chunk_dimensions;
 uniform sampler2D texture_sampler : filter_nearest, source_color;
 uniform ivec2 texture_scale;
 
+uniform float ambient_light = 0.1;
+
 // Utility function to get the index in the lighting array
 int get_index(ivec3 chunk_block_position) {
     ivec3 offset_position = chunk_block_position + ivec3(1, 0, 1);
@@ -45,28 +47,26 @@ void vertex() {
 
 void fragment() {
     // Sample texture color
+    ivec3 chunk_world_position = ivec3(chunk_position.x * chunk_dimensions.x, 0, chunk_position.y * chunk_dimensions.z);
+
     vec3 texture_color = texture(texture_sampler, UV).rgb;
 
+    vec3 offset_world_position = world_position + (normalized_normal * -0.01);
+    ivec3 world_block_position = ivec3(floor(offset_world_position));
+
     // Convert vertex position to chunk-relative position
-    ivec3 chunk_world_position = ivec3(chunk_position.x * chunk_dimensions.x, 0, chunk_position.y * chunk_dimensions.z);
-    ivec3 world_block_position = ivec3(floor(world_position));
     ivec3 chunk_block_position = world_block_position - chunk_world_position;
 
+    // Use normal to get neighboring block position
+    ivec3 neighbor_block_position = get_neighbor_block_position(chunk_block_position, normalized_normal);
+
     // Get light level of the current block
-    float light_level = get_light_level(chunk_block_position);
+    float light_level = get_light_level(neighbor_block_position);
 
-    // Check and blend light level of neighboring blocks based on face normal
-    for (int i = 0; i < 3; i++) {
-        vec3 offset_normal = vec3(0.0);
-        offset_normal[i] = 1.0;
-        light_level = max(light_level, get_light_level(chunk_block_position + ivec3(offset_normal)));
-
-        offset_normal[i] = -1.0;
-        light_level = max(light_level, get_light_level(chunk_block_position + ivec3(offset_normal)));
-    }
+    float multiplier = (1.0 - ambient_light) * light_level + ambient_light;
 
     // Apply light level to texture color
-    vec3 final_color = mix(vec3(0.0), texture_color, light_level);
+    vec3 final_color = mix(vec3(0.0), texture_color, multiplier);
 
     // Output final color
     ALBEDO = final_color;

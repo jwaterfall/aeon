@@ -16,12 +16,19 @@ namespace Aeon
         private ChunkManager _chunkManager;
         private ChunkMeshGenerator _chunkMeshGenerator;
         private ChunkDecorator _chunkDecorator;
-        private ChunkData _chunkData;
-        private byte[] _lightData;
+        private ChunkData _chunkData = new StandardChunkData(Configuration.CHUNK_DIMENSION);
+
+        private Queue<Vector3I> _lightPropagationQueue = new Queue<Vector3I>();
+        private Queue<Vector3I> _darknessPropagationQueue = new Queue<Vector3I>();
+        private byte[] _lightData = Enumerable.Repeat((byte)0, Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z).ToArray();
+
+        private Queue<Vector3I> _sunlightPropagationQueue = new Queue<Vector3I>();
+        private byte[] _sunlightData = Enumerable.Repeat((byte)0, Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z).ToArray();
 
         public bool IsGenerated { get; private set; } = false;
         public bool IsDecorated { get; private set; } = false;
         public bool IsRendered { get; private set; } = false;
+        public bool IsDirty { get; set; } = false;
 
         public override void _Ready()
         {
@@ -36,9 +43,6 @@ namespace Aeon
 
             _collisionShapeNode = new CollisionShape3D();
             AddChild(_collisionShapeNode);
-
-            _chunkData = new StandardChunkData(Dimensions);
-            _lightData = new byte[Dimensions.X * Dimensions.Y * Dimensions.Z];
         }
 
         public void Generate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
@@ -69,7 +73,6 @@ namespace Aeon
             _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             _chunkData.Optimize(this);
-            CalculateLightLevels();
 
             IsDecorated = true;
         }
@@ -110,41 +113,24 @@ namespace Aeon
                    localPosition.Z >= 0 && localPosition.Z < Dimensions.Z;
         }
 
-        private void CalculateLightLevels()
+        public void Update()
         {
-            for (int i = 0; i < _lightData.Length; i++)
+            if (IsDirty)
             {
-                _lightData[i] = 0;
+                Render();
+                IsDirty = false;
             }
 
-            var lightsToPropagate = new Queue<Vector3I>();
-
-            for (int x = 0; x < Dimensions.X; x++)
+            while (_darknessPropagationQueue.Count > 0)
             {
-                for (int z = 0; z < Dimensions.Z; z++)
-                {
-                    Vector3I localPosition = new Vector3I(x, Dimensions.Y - 1, z);
-                    var blockType = _chunkData.GetBlock(localPosition);
-
-                    if (blockType.Transparent)
-                    {
-                        lightsToPropagate.Enqueue(localPosition);
-                        _lightData[GetIndex(localPosition)] = 15;
-                    }
-                }
-            }
-
-            while (lightsToPropagate.Count > 0)
-            {
-                var localPosition = lightsToPropagate.Dequeue();
-                var lightLevel = _lightData[GetIndex(localPosition)];
-
-                var downNeighbor = localPosition + Vector3I.Down;
+                GD.Print("Starting darkness propagation");
+                var localPosition = _darknessPropagationQueue.Dequeue();
+                var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
 
                 var neighbors = new[]
                 {
-                    downNeighbor,
                     localPosition + Vector3I.Up,
+                    localPosition + Vector3I.Down,
                     localPosition + Vector3I.Left,
                     localPosition + Vector3I.Right,
                     localPosition + Vector3I.Forward,
@@ -153,16 +139,51 @@ namespace Aeon
 
                 foreach (var neighbor in neighbors)
                 {
-                    if (!IsInChunk(neighbor)) continue;
+                    var neigbourGlobalPosition = GetWorldPosition(neighbor);
+                    var neighborLightLevel = _chunkManager.GetLightLevel(neigbourGlobalPosition);
 
-                    var neighborLightLevel = _lightData[GetIndex(neighbor)];
-                    var neighborBlockType = _chunkData.GetBlock(neighbor);
-                    var newLightLevel = neighbor == downNeighbor ? lightLevel : lightLevel - 1;
+                    if (neighborLightLevel > 0 && neighborLightLevel < lightLevel)
+                    {
+                        _darknessPropagationQueue.Enqueue(neighbor);
+                    }
+                    else
+                    {
+                        _lightPropagationQueue.Enqueue(neighbor);
+                    }
+
+                    _chunkManager.SetLightLevel(GetWorldPosition(localPosition), 0);
+                }
+            }
+
+            while (_lightPropagationQueue.Count > 0)
+            {
+                var localPosition = _lightPropagationQueue.Dequeue();
+                var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
+
+                if (lightLevel <= 1) continue;
+
+                var neighbors = new[]
+                {
+                    localPosition + Vector3I.Up,
+                    localPosition + Vector3I.Down,
+                    localPosition + Vector3I.Left,
+                    localPosition + Vector3I.Right,
+                    localPosition + Vector3I.Forward,
+                    localPosition + Vector3I.Back
+                };
+                
+                var newLightLevel = (byte)(lightLevel - 1);
+
+                foreach (var neighbor in neighbors)
+                {
+                    var neigbourGlobalPosition = GetWorldPosition(neighbor);
+                    var neighborLightLevel = _chunkManager.GetLightLevel(neigbourGlobalPosition);
+                    var neighborBlockType = _chunkManager.GetBlock(neigbourGlobalPosition);
 
                     if (neighborBlockType.Transparent && neighborLightLevel < newLightLevel)
                     {
-                        _lightData[GetIndex(neighbor)] = (byte)(newLightLevel);
-                        lightsToPropagate.Enqueue(neighbor);
+                        _chunkManager.SetLightLevel(neigbourGlobalPosition, newLightLevel);
+                        _lightPropagationQueue.Enqueue(neighbor);
                     }
                 }
             }
@@ -179,9 +200,10 @@ namespace Aeon
             return _lightData[GetIndex(localPosition)];
         }
 
-        private byte GetLightLevelOrNeighbors(Vector3I localPosition)
+        public void SetLightLevel(Vector3I localPosition, byte lightLevel)
         {
-            return IsInChunk(localPosition) ? GetLightLevel(localPosition) : _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
+            _lightData[GetIndex(localPosition)] = lightLevel;
+            IsDirty = true;
         }
 
         private byte[] GetShaderLightData()
@@ -197,7 +219,7 @@ namespace Aeon
                     for (int z = 0; z < dimensions.Z; z++)
                     {
                         var localPosition = new Vector3I(x - 1, y, z - 1);
-                        var lightLevel = GetLightLevelOrNeighbors(localPosition);
+                        var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
 
                         var offsetPosition = new Vector3I(x, y, z);
                         var index = (offsetPosition.Y * dimensions.Z * dimensions.X) + (offsetPosition.Z * dimensions.X) + offsetPosition.X;
@@ -225,10 +247,58 @@ namespace Aeon
         public void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
         {
             if (!IsInChunk(localPosition)) return;
-
             if (replaces != null && _chunkData.GetBlock(localPosition) != replaces) return;
 
+            var existingBlock = _chunkData.GetBlock(localPosition);
+
+            if (existingBlock == blockType) return;
+
             _chunkData.SetBlock(this, localPosition, blockType);
+
+            var neigbors = new[]
+            {
+                localPosition + Vector3I.Up,
+                localPosition + Vector3I.Down,
+                localPosition + Vector3I.Left,
+                localPosition + Vector3I.Right,
+                localPosition + Vector3I.Forward,
+                localPosition + Vector3I.Back
+            };
+
+            if (existingBlock.LightOutput > 0)
+            {
+                foreach (var neighbor in neigbors)
+                {
+                    var block = _chunkManager.GetBlock(GetWorldPosition(neighbor));
+
+                    if (block.Transparent)
+                    {
+                        _darknessPropagationQueue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            if (blockType.LightOutput > 0)
+            {
+
+                foreach (var neighbor in neigbors)
+                {
+                    var block = _chunkManager.GetBlock(GetWorldPosition(neighbor));
+
+                    if (block.Transparent)
+                    {
+                        _chunkManager.SetLightLevel(GetWorldPosition(neighbor), blockType.LightOutput);
+                        _lightPropagationQueue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            if (!blockType.Transparent)
+            {
+                var index = GetIndex(localPosition);
+                _lightData[index] = 0;
+                _sunlightData[index] = 0;
+            }
 
             if (optimize)
             {
