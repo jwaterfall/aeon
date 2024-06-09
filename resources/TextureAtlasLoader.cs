@@ -10,8 +10,7 @@ namespace Aeon
         protected string extension;
         public bool loaded = false;
         public Vector2I size;
-        public StandardMaterial3D material = new();
-        public StandardMaterial3D transparentMaterial = new();
+        public AtlasTexture TextureAtlasTexture = new();
         private Dictionary<string, Image> textures = new();
         private Dictionary<string, Vector2I> offsets = new();
         private readonly int textureSize;
@@ -57,17 +56,10 @@ namespace Aeon
 
             var texture = ImageTexture.CreateFromImage(atlasImage);
 
-            AtlasTexture textureAtlasTexture = new()
+            TextureAtlasTexture = new()
             {
                 Atlas = texture
             };
-
-            material.AlbedoTexture = textureAtlasTexture;
-            material.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
-
-            transparentMaterial.AlbedoTexture = textureAtlasTexture;
-            transparentMaterial.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
-            transparentMaterial.Transparency = BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass;
 
             loaded = true;
 

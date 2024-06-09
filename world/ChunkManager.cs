@@ -221,6 +221,19 @@ namespace Aeon
             return null;
         }
 
+        public byte GetLightLevel(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                return _chunks[chunkPosition].GetLightLevel(localPosition);
+            }
+
+            return 0;
+        }
+
         private Vector2I WorldToChunkPosition(Vector3 worldPosition)
         {
             return new Vector2I(
