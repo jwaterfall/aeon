@@ -20,6 +20,7 @@ namespace Aeon
         private byte[] _lightData;
 
         public bool IsGenerated { get; private set; } = false;
+        public bool IsDecorated { get; private set; } = false;
         public bool IsRendered { get; private set; } = false;
 
         public override void _Ready()
@@ -40,7 +41,7 @@ namespace Aeon
             _lightData = new byte[Dimensions.X * Dimensions.Y * Dimensions.Z];
         }
 
-        public void GenerateBlocks(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
+        public void Generate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
         {
             for (int x = 0; x < Dimensions.X; x++)
             {
@@ -58,21 +59,28 @@ namespace Aeon
                 }
             }
 
+            _chunkData.Optimize(this);
+
+            IsGenerated = true;
+        }
+
+        public void Decorate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
+        {
             _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             _chunkData.Optimize(this);
             CalculateLightLevels();
 
-            IsGenerated = true;
+            IsDecorated = true;
         }
 
         public void Render()
         {
             _chunkMeshGenerator.Generate();
-            CallDeferred(nameof(AfterRender));
+            CallDeferred(nameof(SubmitMesh));
         }
 
-        public void AfterRender()
+        public void SubmitMesh()
         {
             _meshInstance.Mesh = _chunkMeshGenerator.Mesh;
             _transparentMeshInstance.Mesh = _chunkMeshGenerator.TransparentMesh;

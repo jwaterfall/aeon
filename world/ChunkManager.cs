@@ -47,14 +47,23 @@ namespace Aeon
         {
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
-            var chunksToRender = _chunks.Values
-                .OrderBy(chunk => ((Vector2)chunk.ChunkPosition).DistanceTo(playerChunkPosition))
-                .Where(chunk => chunk.IsGenerated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
+            var orderedChunks = _chunks.Values
+                .OrderBy(chunk => ((Vector2)chunk.ChunkPosition).DistanceTo(playerChunkPosition));
+
+            var chunksToDecorate = orderedChunks
+                .Where(chunk => chunk.IsGenerated && !chunk.IsDecorated)
+                .ToList();
+
+            DecorateChunks(chunksToDecorate, terrainGenerator);
+
+            var chunksToRender = orderedChunks
+                .Where(chunk => chunk.IsGenerated && chunk.IsDecorated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
                 .Select(chunk => chunk.ChunkPosition)
                 .ToList();
 
-            GenerateChunks(playerChunkPosition, terrainGenerator);
             RenderChunks(chunksToRender);
+
+            GenerateChunks(playerChunkPosition, terrainGenerator);
 
             for (int i = 0; i < _chunksToRemove.Count; i++)
             {
@@ -128,7 +137,7 @@ namespace Aeon
 
                         if (!chunk.IsGenerated)
                         {
-                            chunk.GenerateBlocks(terrainGenerator, WorldPresets.Instance.Get("default"));
+                            chunk.Generate(terrainGenerator, WorldPresets.Instance.Get("default"));
                         }
 
                         stopwatch.Stop();
@@ -138,6 +147,24 @@ namespace Aeon
                             _totalGenerationTime += stopwatch.Elapsed.TotalMilliseconds;
                             _generationCount++;
                         }
+                    });
+                }
+            }
+        }
+
+        private void DecorateChunks(List<Chunk> chunksToDecorate, TerrainGenerator terrainGenerator)
+        {
+            for (int i = 0; i < _tasks.Length; i++)
+            {
+                var task = _tasks[i];
+                if (chunksToDecorate.Count > 0 && (task == null || task.IsCompleted))
+                {
+                    var chunk = chunksToDecorate[0];
+                    chunksToDecorate.RemoveAt(0);
+
+                    _tasks[i] = Task.Run(() =>
+                    {
+                        chunk.Decorate(terrainGenerator, WorldPresets.Instance.Get("default"));
                     });
                 }
             }
@@ -205,6 +232,17 @@ namespace Aeon
                         yield return chunkPosition;
                     }
                 }
+            }
+        }
+
+        public void SetBlock(Vector3I worldPosition, BlockType block)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                _chunks[chunkPosition].SetBlock(localPosition, block);
             }
         }
 

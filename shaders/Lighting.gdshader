@@ -8,7 +8,7 @@ uniform ivec2 chunk_position;
 uniform ivec3 chunk_dimensions;
 
 // Texture parameters
-uniform sampler2D texture_sampler : filter_nearest;
+uniform sampler2D texture_sampler : filter_nearest, source_color;
 uniform ivec2 texture_scale;
 
 // Utility function to get the index in the lighting array
@@ -66,7 +66,7 @@ void fragment() {
     }
 
     // Apply light level to texture color
-    vec3 final_color = texture_color * light_level;
+    vec3 final_color = mix(vec3(0.0), texture_color, light_level);
 
     // Output final color
     ALBEDO = final_color;

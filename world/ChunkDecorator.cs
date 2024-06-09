@@ -17,9 +17,21 @@ namespace Aeon
 
         public void Decorate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
         {
-            GenerateOres(worldPreset);
+            //GenerateOres(worldPreset);
             GenerateGrass(terrainGenerator);
             GenerateTrees(terrainGenerator);
+        }
+
+        private void SetBlockInOrOut(Vector3I localPosition, BlockType blockType)
+        {
+            if (_chunk.IsInChunk(localPosition))
+            {
+                _chunk.SetBlock(localPosition, blockType);
+            }
+            else
+            {
+                _chunkManager.SetBlock(_chunk.GetWorldPosition(localPosition), blockType);
+            }
         }
 
         private void GenerateOres(WorldPreset worldPreset)
@@ -46,7 +58,7 @@ namespace Aeon
 
                         if (_chunk.IsInChunk(localPosition))
                         {
-                            _chunk.SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), false, BlockTypes.Instance.Get("stone"));
+                            SetBlockInOrOut(localPosition, BlockTypes.Instance.Get(ore.Block));
                         }
                     }
                 }
@@ -66,9 +78,9 @@ namespace Aeon
                     Vector3I blockBelowPosition = new Vector3I(x, height, z);
                     var blockBelow = _chunk.IsInChunk(blockBelowPosition) ? _chunk.GetBlock(blockBelowPosition) : _chunkManager.GetBlock(_chunk.GetWorldPosition(blockBelowPosition));
 
-                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.2f)
+                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.025f)
                     {
-                        _chunk.SetBlock(new Vector3I(x, height + 1, z), BlockTypes.Instance.Get("short_grass"));
+                        SetBlockInOrOut(new Vector3I(x, height + 1, z), BlockTypes.Instance.Get("short_grass"));
                     }
                 }
             }
@@ -81,7 +93,7 @@ namespace Aeon
             {
                 for (int z = 0; z < _chunk.Dimensions.Z; z++)
                 {
-                    if (random.NextDouble() > 0.02f) continue;
+                    if (random.NextDouble() > 0.005f) continue;
 
                     int height = terrainGenerator.GetHeight(_chunk.ChunkPosition * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
@@ -89,8 +101,8 @@ namespace Aeon
                     var blockBelow = _chunk.GetBlock(new Vector3I(x, height, z));
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
-                    int trunkHeight = random.Next(5, 10);
-                    _chunk.SetBlock(new Vector3I(x, height, z), BlockTypes.Instance.Get("dirt"));
+                    int trunkHeight = random.Next(5, 7);
+                    SetBlockInOrOut(new Vector3I(x, height, z), BlockTypes.Instance.Get("dirt"));
                     GenerateTreeTrunk(height, trunkHeight, x, z);
                     GenerateTreeLeaves(height, trunkHeight, x, z);
                 }
@@ -101,7 +113,7 @@ namespace Aeon
         {
             for (int y = 1; y <= trunkHeight; y++)
             {
-                _chunk.SetBlock(new Vector3I(x, localHeight + y, z), BlockTypes.Instance.Get("spruce_log"));
+                SetBlockInOrOut(new Vector3I(x, localHeight + y, z), BlockTypes.Instance.Get("spruce_log"));
             }
         }
 
@@ -117,7 +129,7 @@ namespace Aeon
                 {
                     for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
                     {
-                        _chunk.SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
+                        SetBlockInOrOut(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }
@@ -131,7 +143,7 @@ namespace Aeon
                 {
                     for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
                     {
-                        _chunk.SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
+                        SetBlockInOrOut(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }
