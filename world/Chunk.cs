@@ -15,6 +15,7 @@ namespace Aeon
         public readonly Vector3I Dimensions = Configuration.CHUNK_DIMENSION;
         private ChunkManager _chunkManager;
         private ChunkMeshGenerator _chunkMeshGenerator;
+        private ChunkDecorator _chunkDecorator;
         private ChunkData _chunkData;
         private byte[] _lightData;
 
@@ -24,6 +25,7 @@ namespace Aeon
         public override void _Ready()
         {
             _chunkMeshGenerator = new ChunkMeshGenerator(this, _chunkManager);
+            _chunkDecorator = new ChunkDecorator(this, _chunkManager);
 
             _meshInstance = new MeshInstance3D();
             AddChild(_meshInstance);
@@ -56,129 +58,12 @@ namespace Aeon
                 }
             }
 
-            GenerateOres(worldPreset, terrainGenerator);
-            GenerateGrass(terrainGenerator);
-            GenerateTrees(terrainGenerator);
+            _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             _chunkData.Optimize(this);
             CalculateLightLevels();
 
             IsGenerated = true;
-        }
-
-        private void GenerateOres(WorldPreset worldPreset, TerrainGenerator terrainGenerator)
-        {
-            var random = new Random();
-            foreach (var ore in worldPreset.Ores)
-            {
-                for (int i = 0; i < ore.Frequency; i++)
-                {
-                    Vector3I localStartPosition = new Vector3I(
-                        random.Next(0, Dimensions.X),
-                        random.Next(0, Dimensions.Y),
-                        random.Next(0, Dimensions.Z)
-                    );
-
-                    Vector3I globalStartPosition = GetWorldPosition(localStartPosition);
-                    if (globalStartPosition.Y < ore.MinHeight || globalStartPosition.Y > ore.MaxHeight) continue;
-
-                    var veinPositions = new List<Vector3I>();
-                    for (int j = 0; j < ore.Size; j++)
-                    {
-                        Vector3I localPosition = veinPositions.Count == 0 ? localStartPosition : veinPositions[j - 1] + new Vector3I(random.Next(-1, 2), random.Next(-1, 2), random.Next(-1, 2));
-                        veinPositions.Add(localPosition);
-
-                        if (IsInChunk(localPosition))
-                        {
-                            SetBlock(localPosition, BlockTypes.Instance.Get(ore.Block), false, BlockTypes.Instance.Get("stone"));
-                        }
-                    }
-                }
-            }
-        }
-
-        private void GenerateGrass(TerrainGenerator terrainGenerator)
-        {
-            var random = new Random();
-            for (int x = 0; x < Dimensions.X; x++)
-            {
-                for (int z = 0; z < Dimensions.Z; z++)
-                {
-                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Dimensions.X, Dimensions.Z) + new Vector2I(x, z));
-                    if (height < 0 || height > Dimensions.Y - 2) continue;
-
-                    Vector3I blockBelowPosition = new Vector3I(x, height, z);
-                    var blockBelow = IsInChunk(blockBelowPosition) ? GetBlock(blockBelowPosition) : _chunkManager.GetBlock(GetWorldPosition(blockBelowPosition));
-
-                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.2f)
-                    {
-                        SetBlock(new Vector3I(x, height + 1, z), BlockTypes.Instance.Get("short_grass"));
-                    }
-                }
-            }
-        }
-
-        private void GenerateTrees(TerrainGenerator terrainGenerator)
-        {
-            var random = new Random();
-            for (int x = 0; x < Dimensions.X; x++)
-            {
-                for (int z = 0; z < Dimensions.Z; z++)
-                {
-                    if (random.NextDouble() > 0.02f) continue;
-
-                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Dimensions.X, Dimensions.Z) + new Vector2I(x, z));
-                    if (height < 0 || height > Dimensions.Y - 2) continue;
-
-                    var blockBelow = _chunkData.GetBlock(new Vector3I(x, height, z));
-                    if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
-
-                    int trunkHeight = random.Next(5, 10);
-                    SetBlock(new Vector3I(x, height, z), BlockTypes.Instance.Get("dirt"));
-                    GenerateTreeTrunk(height, trunkHeight, x, z);
-                    GenerateTreeLeaves(height, trunkHeight, x, z);
-                }
-            }
-        }
-
-        private void GenerateTreeTrunk(int localHeight, int trunkHeight, int x, int z)
-        {
-            for (int y = 1; y <= trunkHeight; y++)
-            {
-                SetBlock(new Vector3I(x, localHeight + y, z), BlockTypes.Instance.Get("spruce_log"));
-            }
-        }
-
-        private void GenerateTreeLeaves(int localHeight, int trunkHeight, int x, int z)
-        {
-            var random = new Random();
-            int brimHeight = random.Next(1, 3);
-            int brimWidth = 2;
-
-            for (int y = 1; y <= brimHeight; y++)
-            {
-                for (int xOffset = -brimWidth; xOffset <= brimWidth; xOffset++)
-                {
-                    for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
-                    {
-                        SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
-                    }
-                }
-            }
-
-            int topHeight = random.Next(1, 2);
-            int topWidth = 1;
-
-            for (int y = 1; y <= topHeight; y++)
-            {
-                for (int xOffset = -topWidth; xOffset <= topWidth; xOffset++)
-                {
-                    for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
-                    {
-                        SetBlock(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
-                    }
-                }
-            }
         }
 
         public void Render()
@@ -329,7 +214,7 @@ namespace Aeon
             return _chunkData.GetBlock(localPosition);
         }
 
-        private void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
+        public void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
         {
             if (!IsInChunk(localPosition)) return;
 
