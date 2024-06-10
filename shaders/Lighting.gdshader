@@ -1,6 +1,7 @@
 shader_type spatial;
 
-uniform int chunk_lighting_data[295936]; // x - (32 + 2) * y - 256 * z - (32 + 2)
+
+uniform int chunk_lighting_data[82944]; // x - (16 + 2) * y - 256 * z - (16 + 2)
 uniform ivec2 chunk_position;
 uniform ivec3 chunk_dimensions;
 uniform sampler2D texture_sampler : filter_nearest, source_color;

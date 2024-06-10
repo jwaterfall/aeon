@@ -17,10 +17,10 @@ namespace Aeon
         private ChunkMeshGenerator _chunkMeshGenerator;
         private ChunkDecorator _chunkDecorator;
         private ChunkData _chunkData = new StandardChunkData(Configuration.CHUNK_DIMENSION);
+        private ChunkLightData _chunkLightData = new(Configuration.CHUNK_DIMENSION);
 
         private Queue<Vector3I> _lightPropagationQueue = new Queue<Vector3I>();
         private Queue<Vector3I> _darknessPropagationQueue = new Queue<Vector3I>();
-        private byte[] _lightData = Enumerable.Repeat((byte)0, Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z).ToArray();
 
         private Queue<Vector3I> _sunlightPropagationQueue = new Queue<Vector3I>();
         private byte[] _sunlightData = Enumerable.Repeat((byte)0, Configuration.CHUNK_DIMENSION.X * Configuration.CHUNK_DIMENSION.Y * Configuration.CHUNK_DIMENSION.Z).ToArray();
@@ -83,15 +83,41 @@ namespace Aeon
             CallDeferred(nameof(SubmitMesh));
         }
 
+        public void RefreshShaderLightData()
+        {
+            var dimensions = Dimensions + new Vector3I(2, 0, 2);
+
+            var data = new byte[dimensions.X * dimensions.Y * dimensions.Z];
+
+            for (int x = 0; x < dimensions.X; x++)
+            {
+                for (int y = 0; y < dimensions.Y; y++)
+                {
+                    for (int z = 0; z < dimensions.Z; z++)
+                    {
+                        var localPosition = new Vector3I(x - 1, y, z - 1);
+                        var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
+
+                        var offsetPosition = new Vector3I(x, y, z);
+                        var index = (offsetPosition.Y * dimensions.Z * dimensions.X) + (offsetPosition.Z * dimensions.X) + offsetPosition.X;
+                        data[index] = lightLevel;
+                    }
+                }
+            }
+
+            _chunkMeshGenerator.Material.SetShaderParameter("chunk_lighting_data", data);
+        }
+
         public void SubmitMesh()
         {
             _meshInstance.Mesh = _chunkMeshGenerator.Mesh;
             _transparentMeshInstance.Mesh = _chunkMeshGenerator.TransparentMesh;
             _collisionShapeNode.Shape = _chunkMeshGenerator.CollisionShape;
 
-            _chunkMeshGenerator.Material.SetShaderParameter("chunk_lighting_data", GetShaderLightData());
             _meshInstance.MaterialOverride = _chunkMeshGenerator.Material;
             _transparentMeshInstance.MaterialOverride = _chunkMeshGenerator.TransparentMaterial;
+
+            RefreshShaderLightData();
 
             IsRendered = true;
         }
@@ -117,7 +143,7 @@ namespace Aeon
         {
             if (IsDirty)
             {
-                Render();
+                RefreshShaderLightData();
                 IsDirty = false;
             }
 
@@ -197,38 +223,13 @@ namespace Aeon
 
         public byte GetLightLevel(Vector3I localPosition)
         {
-            return _lightData[GetIndex(localPosition)];
+            return _chunkLightData.Get(localPosition);
         }
 
         public void SetLightLevel(Vector3I localPosition, byte lightLevel)
         {
-            _lightData[GetIndex(localPosition)] = lightLevel;
+            _chunkLightData.Set(localPosition, lightLevel);
             IsDirty = true;
-        }
-
-        private byte[] GetShaderLightData()
-        {
-            var dimensions = Dimensions + new Vector3I(2, 0, 2);
-
-            var data = new byte[dimensions.X * dimensions.Y * dimensions.Z];
-
-            for (int x = 0; x < dimensions.X; x++)
-            {
-                for (int y = 0; y < dimensions.Y; y++)
-                {
-                    for (int z = 0; z < dimensions.Z; z++)
-                    {
-                        var localPosition = new Vector3I(x - 1, y, z - 1);
-                        var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
-
-                        var offsetPosition = new Vector3I(x, y, z);
-                        var index = (offsetPosition.Y * dimensions.Z * dimensions.X) + (offsetPosition.Z * dimensions.X) + offsetPosition.X;
-                        data[index] = lightLevel;
-                    }
-                }
-            }
-
-            return data;
         }
 
         public void Initialize(ChunkManager chunkManager, Vector2I chunkPosition)
@@ -296,7 +297,7 @@ namespace Aeon
             if (!blockType.Transparent)
             {
                 var index = GetIndex(localPosition);
-                _lightData[index] = 0;
+                _chunkLightData.Set(localPosition, 0);
                 _sunlightData[index] = 0;
             }
 
