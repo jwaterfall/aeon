@@ -39,11 +39,9 @@ namespace Aeon
 
         public ChunkMeshGenerator(Chunk chunk, ChunkManager chunkManager)
         {
-
             Material.Shader = GD.Load<Shader>("res://shaders/Lighting.gdshader");
             Material.SetShaderParameter("chunk_position", chunk.ChunkPosition);
             Material.SetShaderParameter("chunk_dimensions", chunk.Dimensions);
-            Material.SetShaderParameter("texture_scale", BlockTextures.Instance.size);
             Material.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
 
             TransparentMaterial.AlbedoTexture = BlockTextures.Instance.TextureAtlasTexture;

@@ -1,0 +1,12 @@
+model: cube
+light_output:
+  red: 15
+  green: 15
+  blue: 6
+textures:
+  top: glowstone
+  bottom: glowstone
+  left: glowstone
+  right: glowstone
+  front: glowstone
+  back: glowstone

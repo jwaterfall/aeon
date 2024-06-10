@@ -1,41 +1,46 @@
 shader_type spatial;
 
+uniform vec3 chunk_lighting_data[82944]; // x - (16 + 2) * y - 256 * z - (16 + 2)
+uniform ivec2 chunk_position;
+uniform ivec3 chunk_dimensions;
+uniform sampler2D texture_sampler : filter_nearest, source_color;
+uniform vec3 ambient_light = vec3(0.1);
+
 varying vec3 world_position;
 varying vec3 normalized_normal;
 
-uniform int chunk_lighting_data[295936]; // Expanded lighting data for neighboring chunks
-uniform ivec2 chunk_position;
-uniform ivec3 chunk_dimensions;
-
-// Texture parameters
-uniform sampler2D texture_sampler : filter_nearest, source_color;
-uniform ivec2 texture_scale;
-
-// Utility function to get the index in the lighting array
-int get_index(ivec3 chunk_block_position) {
-    ivec3 offset_position = chunk_block_position + ivec3(1, 0, 1);
-    return (offset_position.y * (chunk_dimensions.z + 2) * (chunk_dimensions.x + 2)) + (offset_position.z * (chunk_dimensions.x + 2)) + offset_position.x;
+int get_light_index(ivec3 local_position) {
+    ivec3 offset_position = local_position + ivec3(1, 0, 1); // Adjust for extra margin in lighting data
+    return (offset_position.y * (chunk_dimensions.z + 2) * (chunk_dimensions.x + 2)) + 
+           (offset_position.z * (chunk_dimensions.x + 2)) + 
+           offset_position.x;
 }
 
-// Utility function to get the light level of a block
-float get_light_level(ivec3 chunk_block_position) {
-    int index = get_index(chunk_block_position);
-    return float(chunk_lighting_data[index]) / 15.0;
+vec3 get_light_level(ivec3 local_position) {
+    int index = get_light_index(local_position);
+    return chunk_lighting_data[index] / 15.0; // Normalize the light level
 }
 
-// Function to get the neighboring block's position based on the face normal
-ivec3 get_neighbor_block_position(ivec3 chunk_block_position, vec3 normal) {
-    ivec3 neighbor_position = chunk_block_position;
-    if (normal.x > 0.5) neighbor_position.x += 1;  // Right face
-    else if (normal.x < -0.5) neighbor_position.x -= 1;  // Left face
+vec3 get_offset_light_level(ivec3 local_position) {
+    // Offset by 0.5 to get the light level at the center of the block
+    vec3 light_000 = get_light_level(local_position);
+    vec3 light_100 = get_light_level(local_position + ivec3(-1, 0, 0));
+    vec3 light_010 = get_light_level(local_position + ivec3(0, -1, 0));
+    vec3 light_110 = get_light_level(local_position + ivec3(-1, -1, 0));
+    vec3 light_001 = get_light_level(local_position + ivec3(0, 0, -1));
+    vec3 light_101 = get_light_level(local_position + ivec3(-1, 0, -1));
+    vec3 light_011 = get_light_level(local_position + ivec3(0, -1, -1));
+    vec3 light_111 = get_light_level(local_position + ivec3(-1, -1, -1));
 
-    if (normal.y > 0.5) neighbor_position.y += 1;  // Top face
-    else if (normal.y < -0.5) neighbor_position.y -= 1;  // Bottom face
+    vec3 light_x00 = mix(light_100, light_000, 0.5);
+    vec3 light_x10 = mix(light_110, light_010, 0.5);
+    vec3 light_x01 = mix(light_101, light_001, 0.5);
+    vec3 light_x11 = mix(light_111, light_011, 0.5);
 
-    if (normal.z > 0.5) neighbor_position.z += 1;  // Front face
-    else if (normal.z < -0.5) neighbor_position.z -= 1;  // Back face
+    vec3 light_xy0 = mix(light_x10, light_x00, 0.5);
+    vec3 light_xy1 = mix(light_x11, light_x01, 0.5);
 
-    return neighbor_position;
+    return mix(light_xy1, light_xy0, 0.5);
 }
 
 void vertex() {
@@ -44,30 +49,37 @@ void vertex() {
 }
 
 void fragment() {
-    // Sample texture color
-    vec3 texture_color = texture(texture_sampler, UV).rgb;
-
-    // Convert vertex position to chunk-relative position
     ivec3 chunk_world_position = ivec3(chunk_position.x * chunk_dimensions.x, 0, chunk_position.y * chunk_dimensions.z);
-    ivec3 world_block_position = ivec3(floor(world_position));
-    ivec3 chunk_block_position = world_block_position - chunk_world_position;
+    vec3 offset_world_position = world_position + (normalized_normal * -0.01); // Offset slightly to prevent z-fighting
+    ivec3 block_world_position = ivec3(floor(offset_world_position));
 
-    // Get light level of the current block
-    float light_level = get_light_level(chunk_block_position);
+    ivec3 block_local_position = block_world_position - chunk_world_position;
 
-    // Check and blend light level of neighboring blocks based on face normal
-    for (int i = 0; i < 3; i++) {
-        vec3 offset_normal = vec3(0.0);
-        offset_normal[i] = 1.0;
-        light_level = max(light_level, get_light_level(chunk_block_position + ivec3(offset_normal)));
+    // Fetch light levels for the corners of the voxel containing the fragment
+    vec3 light_000 = get_offset_light_level(block_local_position);
+    vec3 light_100 = get_offset_light_level(block_local_position + ivec3(1, 0, 0));
+    vec3 light_010 = get_offset_light_level(block_local_position + ivec3(0, 1, 0));
+    vec3 light_110 = get_offset_light_level(block_local_position + ivec3(1, 1, 0));
+    vec3 light_001 = get_offset_light_level(block_local_position + ivec3(0, 0, 1));
+    vec3 light_101 = get_offset_light_level(block_local_position + ivec3(1, 0, 1));
+    vec3 light_011 = get_offset_light_level(block_local_position + ivec3(0, 1, 1));
+    vec3 light_111 = get_offset_light_level(block_local_position + ivec3(1, 1, 1));
 
-        offset_normal[i] = -1.0;
-        light_level = max(light_level, get_light_level(chunk_block_position + ivec3(offset_normal)));
-    }
+    // Interpolate the light levels based on the fragment's position within the block
+    vec3 position_within_block = fract(offset_world_position);
 
-    // Apply light level to texture color
-    vec3 final_color = mix(vec3(0.0), texture_color, light_level);
+    vec3 light_x00 = mix(light_000, light_100, position_within_block.x);
+    vec3 light_x10 = mix(light_010, light_110, position_within_block.x);
+    vec3 light_x01 = mix(light_001, light_101, position_within_block.x);
+    vec3 light_x11 = mix(light_011, light_111, position_within_block.x);
 
-    // Output final color
+    vec3 light_xy0 = mix(light_x00, light_x10, position_within_block.y);
+    vec3 light_xy1 = mix(light_x01, light_x11, position_within_block.y);
+
+    vec3 light_level = mix(light_xy0, light_xy1, position_within_block.z);
+    light_level = max(light_level, ambient_light); // Ensure ambient light is at least the ambient light
+
+    vec3 texture_color = texture(texture_sampler, UV).rgb;
+    vec3 final_color = texture_color * light_level;
     ALBEDO = final_color;
 }
