@@ -33,7 +33,7 @@ public class BlockType
     public bool Transparent;
     public bool CullsSelf;
     public bool HasCollision;
-    public byte LightOutput;
+    public Vector3I LightOutput;
     public List<Direction> Occludes;
     public List<Face> Faces;
 }
@@ -47,9 +47,16 @@ public class RawBlock
     [DefaultValue(true)]
     public bool HasCollision { get; set; } = true;
     [DefaultValue(0)]
-    public byte LightOutput { get; set; } = 0; 
+    public RawLightOutput LightOutput { get; set; } = new() { red = 0, green = 0, blue = 0 };
     public string Model { get; set; }
     public Dictionary<string, string> Textures { get; set; }
+}
+
+public class RawLightOutput
+{
+    public byte red;
+    public byte green;
+    public byte blue;
 }
 
 public class RawFace
@@ -178,7 +185,7 @@ namespace Aeon
                 Transparent = data.Transparent,
                 CullsSelf = data.CullsSelf,
                 HasCollision = data.HasCollision,
-                LightOutput = data.LightOutput,
+                LightOutput = new(data.LightOutput.red, data.LightOutput.green, data.LightOutput.blue),
                 Occludes = model.Occludes.ConvertAll(s => (Direction)Enum.Parse(typeof(Direction), s, true)),
                 Faces = new List<Face>()
             };

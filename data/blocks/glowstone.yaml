@@ -1,5 +1,8 @@
 model: cube
-light_output: 7
+light_output:
+  red: 15
+  green: 15
+  blue: 6
 textures:
   top: glowstone
   bottom: glowstone

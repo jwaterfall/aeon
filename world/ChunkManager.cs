@@ -263,7 +263,7 @@ namespace Aeon
             return null;
         }
 
-        public byte GetLightLevel(Vector3I worldPosition)
+        public Vector3I GetLightLevel(Vector3I worldPosition)
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
 
@@ -272,10 +272,10 @@ namespace Aeon
                 return _chunks[chunkPosition].GetLightLevel(WorldToLocalPosition(worldPosition));
             }
 
-            return 0;
+            return Vector3I.Zero;
         }
 
-        public void SetLightLevel(Vector3I worldPosition, byte lightLevel)
+        public void SetLightLevel(Vector3I worldPosition, Vector3I lightLevel)
         {
             var chunkPosition = WorldToChunkPosition(worldPosition);
             var localPosition = WorldToLocalPosition(worldPosition);
