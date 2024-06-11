@@ -81,31 +81,6 @@ namespace Aeon
             CallDeferred(nameof(SubmitMesh));
         }
 
-        public void RefreshShaderLightData()
-        {
-            var dimensions = Dimensions + new Vector3I(2, 0, 2);
-
-            var data = new Vector3[dimensions.X * dimensions.Y * dimensions.Z];
-
-            for (int x = 0; x < dimensions.X; x++)
-            {
-                for (int y = 0; y < dimensions.Y; y++)
-                {
-                    for (int z = 0; z < dimensions.Z; z++)
-                    {
-                        var localPosition = new Vector3I(x - 1, y, z - 1);
-                        var lightLevel = _chunkManager.GetLightLevel(GetWorldPosition(localPosition));
-
-                        var offsetPosition = new Vector3I(x, y, z);
-                        var index = (offsetPosition.Y * dimensions.Z * dimensions.X) + (offsetPosition.Z * dimensions.X) + offsetPosition.X;
-                        data[index] = lightLevel;
-                    }
-                }
-            }
-
-            _chunkMeshGenerator.Material.SetShaderParameter("chunk_lighting_data", data);
-        }
-
         public void SubmitMesh()
         {
             _meshInstance.Mesh = _chunkMeshGenerator.Mesh;
@@ -114,8 +89,6 @@ namespace Aeon
 
             _meshInstance.MaterialOverride = _chunkMeshGenerator.Material;
             _transparentMeshInstance.MaterialOverride = _chunkMeshGenerator.TransparentMaterial;
-
-            RefreshShaderLightData();
 
             IsRendered = true;
         }
@@ -154,7 +127,7 @@ namespace Aeon
         {
             if (IsDirty)
             {
-                RefreshShaderLightData();
+                Render();
                 IsDirty = false;
             }
 
