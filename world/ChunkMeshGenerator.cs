@@ -137,6 +137,13 @@ namespace Aeon
             }
         }
 
+        private Vector3 CalculateFaceNormal(List<Vector3> vertices)
+        {
+            var v1 = vertices[1] - vertices[0];
+            var v2 = vertices[2] - vertices[0];
+            return v2.Cross(v1).Normalized();
+        }
+
         private void GenerateFace(Face face, Vector3I localPosition, BlockType blockType)
         {
             var uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
@@ -153,7 +160,13 @@ namespace Aeon
             var b = face.Vertices[1] + localPosition;
             var c = face.Vertices[2] + localPosition;
 
-            st.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc });
+            var normal = CalculateFaceNormal(face.Vertices);
+
+            var neighboringBlockPosition = localPosition + (Vector3I)normal.Floor();
+            var lightLevel = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(neighboringBlockPosition));
+            var color = new Color(lightLevel.X / 15.0f, lightLevel.Y / 15.0f, lightLevel.Z / 15.0f);
+
+            st.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc }, new Color[3] { color, color, color });
 
             if (blockType.HasCollision)
             {
@@ -165,7 +178,7 @@ namespace Aeon
                 var uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
                 var d = face.Vertices[3] + localPosition;
 
-                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd });
+                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd }, new Color[3] { color, color, color }); 
 
                 if (blockType.HasCollision)
                 {
