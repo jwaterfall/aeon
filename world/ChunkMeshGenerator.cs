@@ -136,13 +136,6 @@ namespace Aeon
             }
         }
 
-        private Vector3 CalculateFaceNormal(List<Vector3> vertices)
-        {
-            var v1 = vertices[1] - vertices[0];
-            var v2 = vertices[2] - vertices[0];
-            return v2.Cross(v1).Normalized();
-        }
-
         private Vector3I[] GetBlockPositionsSorroundingVertex(Vector3I localPosition, Vector3I vertex)
         {
             var sorroundingBlocks = new Vector3I[8]
