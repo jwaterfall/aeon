@@ -1,5 +1,6 @@
 ﻿using Godot;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Aeon
 {
@@ -40,8 +41,6 @@ namespace Aeon
         public ChunkMeshGenerator(Chunk chunk, ChunkManager chunkManager)
         {
             Material.Shader = GD.Load<Shader>("res://shaders/Lighting.gdshader");
-            Material.SetShaderParameter("chunk_position", chunk.ChunkPosition);
-            Material.SetShaderParameter("chunk_dimensions", chunk.Dimensions);
             Material.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
 
             TransparentMaterial.AlbedoTexture = BlockTextures.Instance.TextureAtlasTexture;
@@ -137,11 +136,60 @@ namespace Aeon
             }
         }
 
-        private Vector3 CalculateFaceNormal(List<Vector3> vertices)
+        private Vector3I[] GetBlockPositionsSorroundingVertex(Vector3I localPosition, Vector3I vertex)
         {
-            var v1 = vertices[1] - vertices[0];
-            var v2 = vertices[2] - vertices[0];
-            return v2.Cross(v1).Normalized();
+            var sorroundingBlocks = new Vector3I[8]
+            {
+                localPosition + new Vector3I(0, 0, 0) + vertex,
+                localPosition + new Vector3I(0, 0, -1) + vertex,
+                localPosition + new Vector3I(-1, 0, 0) + vertex,
+                localPosition + new Vector3I(-1, 0, -1) + vertex,
+                localPosition + new Vector3I(0, -1, 0) + vertex,
+                localPosition + new Vector3I(0, -1, -1) + vertex,
+                localPosition + new Vector3I(-1, -1, 0) + vertex,
+                localPosition + new Vector3I(-1, -1, -1) + vertex
+             };
+
+            return sorroundingBlocks;
+        }
+
+        private Color GetVertexColor(Vector3I localPosition, Vector3 vertex)
+        {
+            // If vertex is not the corner of the block, return the block color
+            var blockVertexes = new Vector3I[8]
+            {
+                new Vector3I(0, 0, 0),
+                new Vector3I(0, 0, 1),
+                new Vector3I(1, 0, 0),
+                new Vector3I(1, 0, 1),
+                new Vector3I(0, 1, 0),
+                new Vector3I(0, 1, 1),
+                new Vector3I(1, 1, 0),
+                new Vector3I(1, 1, 1)
+            };
+
+            if (!blockVertexes.Any(v => v == vertex))
+            {
+                return new Color(0, 0, 0);
+            }
+
+            var sorroundingBlocks = GetBlockPositionsSorroundingVertex(localPosition, (Vector3I)vertex);
+            var lightLevel = new Vector3(0, 0, 0);
+
+            var count = 0;
+
+            foreach (var blockPosition in sorroundingBlocks)
+            {
+                var light = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(blockPosition));
+                if (light == Vector3.Zero) continue;
+
+                lightLevel += light;
+                count++;
+            }
+
+            lightLevel /= count;
+
+            return new Color(lightLevel.X / 15.0f, lightLevel.Y / 15.0f, lightLevel.Z / 15.0f);
         }
 
         private void GenerateFace(Face face, Vector3I localPosition, BlockType blockType)
@@ -160,13 +208,11 @@ namespace Aeon
             var b = face.Vertices[1] + localPosition;
             var c = face.Vertices[2] + localPosition;
 
-            var normal = CalculateFaceNormal(face.Vertices);
+            var aColor = GetVertexColor(localPosition, face.Vertices[0]);
+            var bColor = GetVertexColor(localPosition, face.Vertices[1]);
+            var cColor = GetVertexColor(localPosition, face.Vertices[2]);
 
-            var neighboringBlockPosition = localPosition + (Vector3I)normal.Floor();
-            var lightLevel = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(neighboringBlockPosition));
-            var color = new Color(lightLevel.X / 15.0f, lightLevel.Y / 15.0f, lightLevel.Z / 15.0f);
-
-            st.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc }, new Color[3] { color, color, color });
+            st.AddTriangleFan(new[] { a, b, c }, new[] { uva, uvb, uvc }, new Color[3] { aColor, bColor, cColor });
 
             if (blockType.HasCollision)
             {
@@ -177,8 +223,9 @@ namespace Aeon
             {
                 var uvd = uvOffset + new Vector2(face.UV[2] * width, face.UV[1] * height);
                 var d = face.Vertices[3] + localPosition;
+                var dColor = GetVertexColor(localPosition, face.Vertices[3]);
 
-                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd }, new Color[3] { color, color, color }); 
+                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd }, new Color[3] { aColor, cColor, dColor }); 
 
                 if (blockType.HasCollision)
                 {
