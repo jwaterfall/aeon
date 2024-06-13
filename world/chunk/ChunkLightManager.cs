@@ -1,7 +1,6 @@
 ﻿using Godot;
 using System;
 using System.Collections.Generic;
-using System.Threading.Channels;
 
 namespace Aeon
 {
@@ -123,9 +122,9 @@ namespace Aeon
         private Vector3I SetVectorWithChannel(Vector3I localPosition, Vector3I value, Vector3I channel, bool keepMax = false)
         {
             var existingValue = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(localPosition));
-            var existingChannelValue = (existingValue * channel);
-            var newChannelValue = keepMax && existingChannelValue > (value * channel) ? existingChannelValue : (value * channel);
-            var newValue = (existingValue - existingChannelValue) + newChannelValue;
+            var existingChannelValue = existingValue * channel;
+            var newChannelValue = keepMax && existingChannelValue > value * channel ? existingChannelValue : value * channel;
+            var newValue = existingValue - existingChannelValue + newChannelValue;
             return newValue;
         }
 
@@ -156,7 +155,7 @@ namespace Aeon
         {
             foreach (var channel in channels)
             {
-                if ((lightLevel * channel) > Vector3I.Zero)
+                if (lightLevel * channel > Vector3I.Zero)
                 {
                     _darknessPropagationQueue.Enqueue((localPosition, channel));
                     _lightRepairQueue.Enqueue(localPosition);

@@ -15,7 +15,7 @@ namespace Aeon
 
         protected int GetIndex(Vector3I localPosition)
         {
-            return (localPosition.Y * _dimensions.Z * _dimensions.X) + (localPosition.Z * _dimensions.X) + localPosition.X;
+            return localPosition.Y * _dimensions.Z * _dimensions.X + localPosition.Z * _dimensions.X + localPosition.X;
         }
 
         public abstract Block GetBlock(Vector3I localPosition);
@@ -36,7 +36,7 @@ namespace Aeon
 
         protected int GetIndex(Vector2I localPosition)
         {
-            return (localPosition.Y * _dimensions.X) + localPosition.X;
+            return localPosition.Y * _dimensions.X + localPosition.X;
         }
 
         public abstract Block GetBlock(Vector2I localPosition);
@@ -184,7 +184,7 @@ namespace Aeon
             }
 
             var modifiedLayerBlocks = Enumerable.Repeat(blockType.Id, _dimensions.X * _dimensions.Z).ToArray();
-            modifiedLayerBlocks[(localPosition.Z * _dimensions.X) + localPosition.X] = blockType.Id;
+            modifiedLayerBlocks[localPosition.Z * _dimensions.X + localPosition.X] = blockType.Id;
             layers[localPosition.Y] = new StandardChunkLayerData(new Vector2I(_dimensions.X, _dimensions.Z), modifiedLayerBlocks, localPosition.Y);
 
             chunkData.SetLayerData(localPosition.Y, layers[localPosition.Y]);

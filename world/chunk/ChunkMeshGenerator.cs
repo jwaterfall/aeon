@@ -36,17 +36,16 @@ namespace Aeon
         public ArrayMesh TransparentMesh { get; private set; }
         public Shape3D CollisionShape { get; private set; }
         public ShaderMaterial Material { get; private set; } = new();
-        public StandardMaterial3D TransparentMaterial { get; private set; } = new();
+        public ShaderMaterial TransparentMaterial { get; private set; } = new();
 
         public ChunkMeshGenerator(Chunk chunk, ChunkManager chunkManager)
         {
-            Material.Shader = GD.Load<Shader>("res://shaders/Lighting.gdshader");
+            Material.Shader = GD.Load<Shader>("res://shaders/Standard.gdshader");
             Material.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
 
-            TransparentMaterial.AlbedoTexture = BlockTextures.Instance.TextureAtlasTexture;
-            TransparentMaterial.TextureFilter = BaseMaterial3D.TextureFilterEnum.Nearest;
-            TransparentMaterial.Transparency = BaseMaterial3D.TransparencyEnum.AlphaDepthPrePass;
-            
+            TransparentMaterial.Shader = GD.Load<Shader>("res://shaders/Transparent.gdshader");
+            TransparentMaterial.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
+
             _chunk = chunk;
             _chunkManager = chunkManager;
         }
@@ -98,7 +97,7 @@ namespace Aeon
 
             var blockType = _chunkManager.GetBlock(_chunk.GetWorldPosition(localPosition));
 
-            return blockType.Occludes.Contains(faceToCheck) == false || (blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf));
+            return blockType.Occludes.Contains(faceToCheck) == false || blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf);
         }
 
         public void Generate()
@@ -231,7 +230,7 @@ namespace Aeon
                 var d = face.Vertices[3] + localPosition;
                 var dColor = GetVertexColor(localPosition, face.Vertices[3]);
 
-                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd }, new Color[3] { aColor, cColor, dColor }); 
+                st.AddTriangleFan(new[] { a, c, d }, new[] { uva, uvc, uvd }, new Color[3] { aColor, cColor, dColor });
 
                 if (blockType.HasCollision)
                 {
