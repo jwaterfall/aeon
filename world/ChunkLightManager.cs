@@ -34,15 +34,15 @@ namespace Aeon
             {
                 var (localPosition, channel) = _darknessPropagationQueue.Dequeue();
 
-                var existingChannelLightLevel = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(localPosition)) * channel;
+                var existingChannelLightLevel = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(localPosition)) * channel;
                 var newLightLevel = SetVectorWithChannel(localPosition, Vector3I.Zero, channel);
 
-                _chunkManager.SetLightLevel(_chunk.GetWorldPosition(localPosition), newLightLevel);
+                _chunkManager.SetBlockLightLevel(_chunk.GetWorldPosition(localPosition), newLightLevel);
 
                 foreach (var neighbor in GetNeighbors(localPosition))
                 {
                     var neighborWorldPosition = _chunk.GetWorldPosition(neighbor);
-                    var neighborLightLevel = _chunkManager.GetLightLevel(neighborWorldPosition) * channel;
+                    var neighborLightLevel = _chunkManager.GetBlockLightLevel(neighborWorldPosition) * channel;
                     var neighborChannelLightLevel = neighborLightLevel * channel;
 
                     if (neighborChannelLightLevel > Vector3I.Zero && neighborChannelLightLevel < existingChannelLightLevel)
@@ -65,7 +65,7 @@ namespace Aeon
 
                 var newLightLevel = SetVectorWithChannel(localPosition, lightLevel, channel, true);
 
-                _chunkManager.SetLightLevel(_chunk.GetWorldPosition(localPosition), newLightLevel);
+                _chunkManager.SetBlockLightLevel(_chunk.GetWorldPosition(localPosition), newLightLevel);
 
                 var newChannelLightLevel = newLightLevel * channel;
 
@@ -74,7 +74,7 @@ namespace Aeon
                 foreach (var neighbor in GetNeighbors(localPosition))
                 {
                     var neighborWorldPosition = _chunk.GetWorldPosition(neighbor);
-                    var neighborLightLevel = _chunkManager.GetLightLevel(neighborWorldPosition) * channel;
+                    var neighborLightLevel = _chunkManager.GetBlockLightLevel(neighborWorldPosition) * channel;
                     var neighborBlockType = _chunkManager.GetBlock(neighborWorldPosition);
 
                     var newNeighborLightLevel = newChannelLightLevel - channel;
@@ -96,7 +96,7 @@ namespace Aeon
                     foreach (var channel in channels)
                     {
                         var neighborWorldPosition = _chunk.GetWorldPosition(neighbor);
-                        var neighborChannelLightLevel = _chunkManager.GetLightLevel(neighborWorldPosition) * channel;
+                        var neighborChannelLightLevel = _chunkManager.GetBlockLightLevel(neighborWorldPosition) * channel;
 
                         if (neighborChannelLightLevel > Vector3I.Zero)
                         {
@@ -122,7 +122,7 @@ namespace Aeon
 
         private Vector3I SetVectorWithChannel(Vector3I localPosition, Vector3I value, Vector3I channel, bool keepMax = false)
         {
-            var existingValue = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(localPosition));
+            var existingValue = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(localPosition));
             var existingChannelValue = (existingValue * channel);
             var newChannelValue = keepMax && existingChannelValue > (value * channel) ? existingChannelValue : (value * channel);
             var newValue = (existingValue - existingChannelValue) + newChannelValue;

@@ -11,7 +11,7 @@ namespace Aeon
         private MeshInstance3D _transparentMeshInstance;
         private CollisionShape3D _collisionShapeNode;
 
-        public Vector2I ChunkPosition { get; private set; }
+        public Vector3I ChunkPosition { get; private set; }
         public readonly Vector3I Dimensions = Configuration.CHUNK_DIMENSION;
         private ChunkManager _chunkManager;
         private ChunkMeshGenerator _chunkMeshGenerator;
@@ -20,9 +20,7 @@ namespace Aeon
         private ChunkData _chunkData = new StandardChunkData(Configuration.CHUNK_DIMENSION);
 
         public bool IsGenerated { get; private set; } = false;
-        public bool IsDecorated { get; private set; } = false;
-        public bool IsRendered { get; private set; } = false;
-        public bool IsDirty { get; set; } = false;
+        public bool NeedsToBeRendered { get; set; } = true;
 
         public override void _Ready()
         {
@@ -46,7 +44,7 @@ namespace Aeon
             {
                 for (int z = 0; z < Dimensions.Z; z++)
                 {
-                    int height = terrainGenerator.GetHeight(ChunkPosition * new Vector2I(Dimensions.X, Dimensions.Z) + new Vector2I(x, z));
+                    int height = terrainGenerator.GetHeight(new Vector2I(ChunkPosition.X, ChunkPosition.Z) * new Vector2I(Dimensions.X, Dimensions.Z) + new Vector2I(x, z));
 
                     for (int y = 0; y < Dimensions.Y; y++)
                     {
@@ -58,18 +56,11 @@ namespace Aeon
                 }
             }
 
-            _chunkData.Optimize(this);
-
-            IsGenerated = true;
-        }
-
-        public void Decorate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
-        {
             _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             _chunkData.Optimize(this);
 
-            IsDecorated = true;
+            IsGenerated = true;
         }
 
         public void Render()
@@ -87,12 +78,12 @@ namespace Aeon
             _meshInstance.MaterialOverride = _chunkMeshGenerator.Material;
             _transparentMeshInstance.MaterialOverride = _chunkMeshGenerator.TransparentMaterial;
 
-            IsRendered = true;
+            NeedsToBeRendered = false;
         }
 
         public Vector3I GetWorldPosition(Vector3I localPosition)
         {
-            return localPosition + new Vector3I(ChunkPosition.X, 0, ChunkPosition.Y) * Dimensions;
+            return localPosition + ChunkPosition * Dimensions;
         }
 
         public void SetChunkData(ChunkData chunkData)
@@ -109,12 +100,6 @@ namespace Aeon
 
         public void Update()
         {
-            if (IsDirty)
-            {
-                Render();
-                IsDirty = false;
-            }
-
             _lightManager.Update();
         }
 
@@ -132,23 +117,23 @@ namespace Aeon
         public void SetLightLevel(Vector3I localPosition, Vector3I lightLevel)
         {
             _lightManager.SetLightLevel(localPosition, lightLevel);
-            IsDirty = true;
+            NeedsToBeRendered = true;
         }
 
-        public void Initialize(ChunkManager chunkManager, Vector2I chunkPosition)
+        public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
         {
             _chunkManager = chunkManager;
             ChunkPosition = chunkPosition;
 
-            Position = new Vector3I(chunkPosition.X, 0, chunkPosition.Y) * Dimensions;
+            Position = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Dimensions;
         }
 
-        public BlockType GetBlock(Vector3I localPosition)
+        public Block GetBlock(Vector3I localPosition)
         {
             return _chunkData.GetBlock(localPosition);
         }
 
-        public void SetBlock(Vector3I localPosition, BlockType blockType, bool optimize = false, BlockType replaces = null)
+        public void SetBlock(Vector3I localPosition, Block blockType, bool optimize = false, Block replaces = null)
         {
             if (!IsInChunk(localPosition)) return;
             if (replaces != null && _chunkData.GetBlock(localPosition) != replaces) return;
@@ -173,6 +158,8 @@ namespace Aeon
             {
                 _chunkData.Optimize(this);
             }
+
+            NeedsToBeRendered = true;
         }
 
         public void BreakBlock(Vector3I localPosition)
@@ -180,7 +167,7 @@ namespace Aeon
             SetBlock(localPosition, BlockTypes.Instance.Get("air"), true);
         }
 
-        public void PlaceBlock(Vector3I localPosition, BlockType blockType)
+        public void PlaceBlock(Vector3I localPosition, Block blockType)
         {
             SetBlock(localPosition, blockType, true);
         }

@@ -2,28 +2,129 @@ using Godot;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Aeon
 {
+    /// <summary>
+    /// Class <c>ChunkManager</c> is responsible for managing the generation, decoration, rendering, and removal of chunks. It also provides methods for getting and setting blocks and light levels.
+    /// </summary>
     public partial class ChunkManager : Node3D
     {
+        private Vector3I? _lastPlayerChunkPosition;
         private readonly PackedScene _chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
-        private readonly ConcurrentDictionary<Vector2I, Chunk> _chunks = new();
-        private ConcurrentQueue<Vector2I> _chunksToGenerate = new();
-        private Queue<Vector2I> _chunksToRemove = new();
-        private Vector2I? _lastPlayerChunkPosition;
+
+        private readonly ConcurrentDictionary<Vector3I, Chunk> _chunks = new();
+        private ConcurrentQueue<Vector3I> _chunksToGenerate = new();
+        private readonly Queue<Vector3I> _chunksToRemove = new();
+        private readonly ConcurrentDictionary<Vector3I, List<(Vector3I, Block)>> _blocksToPlace = new();
+
         private Task[] _tasks = new Task[OS.GetProcessorCount() - 2];
         private Task _renderTask;
 
-        private readonly Stopwatch _renderingStopwatch = new();
-        private double _totalGenerationTime = 0;
-        private double _totalRenderingTime = 0;
-        private int _generationCount = 0;
-        private int _renderingCount = 0;
-        private double _timeAccumulator = 0;
+        /// <summary>
+        /// Method <c>GetBlock</c> gets the block at the given world position.
+        /// </summary>
+        /// <param name="worldPosition">The world position of the block.</param>
+        /// <returns>
+        /// The block at the given world position.
+        /// </returns>
+        public Block GetBlock(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                return _chunks[chunkPosition].GetBlock(WorldToLocalPosition(worldPosition));
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Method <c>SetBlock</c> sets the block at the given world position. If the chunk containing the block does not exist, the block is added to a queue to be placed when the chunk is generated.
+        /// </summary>
+        /// <param name="worldPosition">The world position of the block.</param>
+        /// <param name="block">The block to set.</param>
+        public void SetBlock(Vector3I worldPosition, Block block)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                _chunks[chunkPosition].SetBlock(localPosition, block);
+            }
+            else
+            {
+                if (!_blocksToPlace.ContainsKey(chunkPosition))
+                {
+                    _blocksToPlace[chunkPosition] = new() { (localPosition, block) };
+                }
+                else
+                {
+                    _blocksToPlace[chunkPosition].Add((localPosition, block));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Method <c>GetBlockLightLevel</c> gets the block light level at the given world position.
+        /// </summary>
+        /// <param name="worldPosition">The world position of the block.</param>
+        /// <returns>A Vector3I representing the RGB light level of the block.</returns>
+        public Vector3I GetBlockLightLevel(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                return _chunks[chunkPosition].GetLightLevel(WorldToLocalPosition(worldPosition));
+            }
+
+            return Vector3I.Zero;
+        }
+
+        /// <summary>
+        /// Method <c>SetBlockLightLevel</c> gets the block light level at the given world position.
+        /// </summary>
+        /// <param name="worldPosition">The world position of the block.</param>
+        /// <param name="lightLevel">A Vector3I representing the RGB light level of the block.</param>
+        public void SetBlockLightLevel(Vector3I worldPosition, Vector3I lightLevel)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                _chunks[chunkPosition].SetLightLevel(localPosition, lightLevel);
+            }
+        }
+
+        /// <summary>
+        /// Method <c>WorldToChunkPosition</c> finds the chunk position containing the given world position.
+        /// </summary>
+        /// <param name="worldPosition">A Vector3 representing a position in the world.</param>
+        /// <returns>A Vector3I representing the chunk position containing the given world position.</returns>
+        private Vector3I WorldToChunkPosition(Vector3 worldPosition)
+        {
+            return (Vector3I)(worldPosition / Configuration.CHUNK_DIMENSION).Floor();
+        }
+
+        /// <summary>
+        /// Method <c>WorldToLocalPosition</c> finds the local position of the block within the chunk containing the given world position.
+        /// </summary>
+        /// <param name="worldPosition">A Vector3 representing a position in the world.</param>
+        /// <returns>A Vector3I representing the local position of the block within the chunk containing the given world position.</returns>
+        private Vector3I WorldToLocalPosition(Vector3 worldPosition)
+        {
+            int x = (int)((worldPosition.X % Configuration.CHUNK_DIMENSION.X + Configuration.CHUNK_DIMENSION.X) % Configuration.CHUNK_DIMENSION.X);
+            int y = (int)((worldPosition.Y % Configuration.CHUNK_DIMENSION.Y + Configuration.CHUNK_DIMENSION.Y) % Configuration.CHUNK_DIMENSION.Y);
+            int z = (int)((worldPosition.Z % Configuration.CHUNK_DIMENSION.Z + Configuration.CHUNK_DIMENSION.Z) % Configuration.CHUNK_DIMENSION.Z);
+
+            return new Vector3I(x, y, z);
+        }
 
         public override void _Ready()
         {
@@ -32,32 +133,15 @@ namespace Aeon
             customSignals.PlaceBlock += PlaceBlock;
         }
 
-        public override void _Process(double delta)
-        {
-            _timeAccumulator += delta;
-
-            if (_timeAccumulator >= 5.0f)
-            {
-                LogAverages();
-                _timeAccumulator = 0;
-            }
-        }
-
         public void Update(Vector3 playerPosition, TerrainGenerator terrainGenerator)
         {
             var playerChunkPosition = WorldToChunkPosition(playerPosition);
 
             var orderedChunks = _chunks.Values
-                .OrderBy(chunk => ((Vector2)chunk.ChunkPosition).DistanceTo(playerChunkPosition));
-
-            var chunksToDecorate = orderedChunks
-                .Where(chunk => chunk.IsGenerated && !chunk.IsDecorated)
-                .ToList();
-
-            DecorateChunks(chunksToDecorate, terrainGenerator);
+                .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition));
 
             var chunksToRender = orderedChunks
-                .Where(chunk => chunk.IsGenerated && chunk.IsDecorated && !chunk.IsRendered && CanRenderChunk(chunk.ChunkPosition))
+                .Where(chunk => CanRenderChunk(chunk.ChunkPosition) && chunk.NeedsToBeRendered)
                 .Select(chunk => chunk.ChunkPosition)
                 .ToList();
 
@@ -88,7 +172,7 @@ namespace Aeon
             {
                 _lastPlayerChunkPosition = playerChunkPosition;
 
-                var nearbyChunkPositions = new HashSet<Vector2I>(GetNearbyChunkPositions(playerChunkPosition));
+                var nearbyChunkPositions = new HashSet<Vector3I>(GetNearbyChunkPositions(playerChunkPosition));
 
                 // Remove chunks that are no longer nearby
                 foreach (var chunkPosition in _chunks.Keys.Except(nearbyChunkPositions).ToList())
@@ -114,10 +198,10 @@ namespace Aeon
             }
         }
 
-        private void GenerateChunks(Vector2I playerChunkPosition, TerrainGenerator terrainGenerator)
+        private void GenerateChunks(Vector3I playerChunkPosition, TerrainGenerator terrainGenerator)
         {
             var sortedChunksToGenerate = _chunksToGenerate
-                .OrderBy(chunkPosition => ((Vector2)chunkPosition).DistanceTo(playerChunkPosition))
+                .OrderBy(chunkPosition => ((Vector3)chunkPosition).DistanceTo(playerChunkPosition))
                 .ToList();
 
             for (int i = 0; i < _tasks.Length; i++)
@@ -137,45 +221,26 @@ namespace Aeon
 
                     _tasks[i] = Task.Run(() =>
                     {
-                        var stopwatch = new Stopwatch();
-                        stopwatch.Start();
-
                         if (!chunk.IsGenerated)
                         {
                             chunk.Generate(terrainGenerator, WorldPresets.Instance.Get("default"));
-                        }
 
-                        stopwatch.Stop();
+                            if (_blocksToPlace.ContainsKey(chunkPosition))
+                            {
+                                foreach (var (localPosition, block) in _blocksToPlace[chunkPosition])
+                                {
+                                    chunk.PlaceBlock(localPosition, block);
+                                }
 
-                        lock (this)
-                        {
-                            _totalGenerationTime += stopwatch.Elapsed.TotalMilliseconds;
-                            _generationCount++;
+                                _blocksToPlace.Remove(chunkPosition, out _);
+                            }
                         }
                     });
                 }
             }
         }
 
-        private void DecorateChunks(List<Chunk> chunksToDecorate, TerrainGenerator terrainGenerator)
-        {
-            for (int i = 0; i < _tasks.Length; i++)
-            {
-                var task = _tasks[i];
-                if (chunksToDecorate.Count > 0 && (task == null || task.IsCompleted))
-                {
-                    var chunk = chunksToDecorate[0];
-                    chunksToDecorate.RemoveAt(0);
-
-                    _tasks[i] = Task.Run(() =>
-                    {
-                        chunk.Decorate(terrainGenerator, WorldPresets.Instance.Get("default"));
-                    });
-                }
-            }
-        }
-
-        private void RenderChunks(List<Vector2I> chunksToRender)
+        private void RenderChunks(List<Vector3I> chunksToRender)
         {
             if (chunksToRender.Count > 0 && (_renderTask == null || _renderTask.IsCompleted))
             {
@@ -184,123 +249,56 @@ namespace Aeon
 
                 _renderTask = Task.Run(() =>
                 {
-                    _renderingStopwatch.Restart();
                     RenderChunk(chunkPosition);
-                    _renderingStopwatch.Stop();
-
-                    lock (this)
-                    {
-                        _totalRenderingTime += _renderingStopwatch.Elapsed.TotalMilliseconds;
-                        _renderingCount++;
-                    }
                 });
             }
         }
 
-        private void RenderChunk(Vector2I chunkPosition)
+        private void RenderChunk(Vector3I chunkPosition)
         {
             var chunk = _chunks[chunkPosition];
             chunk.Render();
         }
 
-        private bool CanRenderChunk(Vector2I chunkPosition)
+        private bool CanRenderChunk(Vector3I chunkPosition)
         {
-            var westChunkPosition = chunkPosition + Vector2I.Up;
-            var southChunkPosition = chunkPosition + Vector2I.Right;
-            var eastChunkPosition = chunkPosition + Vector2I.Down;
-            var northChunkPosition = chunkPosition + Vector2I.Left;
+            var chunksToCheck = new List<Vector3I>(12)
+            {
+                chunkPosition,
+                chunkPosition + Vector3I.Left,
+                chunkPosition + Vector3I.Right,
+                chunkPosition + Vector3I.Forward,
+                chunkPosition + Vector3I.Back,
+            };
 
-            return
-                _chunks.ContainsKey(chunkPosition) &&
-                _chunks[chunkPosition].IsGenerated &&
-                _chunks.ContainsKey(northChunkPosition) &&
-                _chunks[northChunkPosition].IsGenerated &&
-                _chunks.ContainsKey(eastChunkPosition) &&
-                _chunks[eastChunkPosition].IsGenerated &&
-                _chunks.ContainsKey(southChunkPosition) &&
-                _chunks[southChunkPosition].IsGenerated &&
-                _chunks.ContainsKey(westChunkPosition) &&
-                _chunks[westChunkPosition].IsGenerated;
+            //for (int i = 0; i < Configuration.VERTICAL_CHUNKS; i++)
+            //{
+            //    chunksToCheck.Add(new Vector3I(chunkPosition.X, i, chunkPosition.Z));
+            //}
+
+            return chunksToCheck.All(chunk => _chunks.ContainsKey(chunk) && _chunks[chunk].IsGenerated);
         }
 
-        private IEnumerable<Vector2I> GetNearbyChunkPositions(Vector2I playerChunkPosition)
+        private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)
         {
             var radius = Configuration.CHUNK_LOAD_RADIUS;
+            var playerXZPosition = new Vector2I(playerChunkPosition.X, playerChunkPosition.Z);
 
             for (int x = -radius; x <= radius; x++)
             {
                 for (int z = -radius; z <= radius; z++)
                 {
-                    var chunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Y);
-                    if (((Vector2)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
+                    var xzChunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Z);
+
+                    if (((Vector2)playerXZPosition).DistanceTo(xzChunkPosition) <= radius)
                     {
-                        yield return chunkPosition;
+                        for (int y = 0; y < Configuration.VERTICAL_CHUNKS; y++)
+                        {
+                            yield return new Vector3I(xzChunkPosition.X, y, xzChunkPosition.Y);
+                        }
                     }
                 }
             }
-        }
-
-        public void SetBlock(Vector3I worldPosition, BlockType block)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-            var localPosition = WorldToLocalPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                _chunks[chunkPosition].SetBlock(localPosition, block);
-            }
-        }
-
-        public BlockType GetBlock(Vector3I worldPosition)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                return _chunks[chunkPosition].GetBlock(WorldToLocalPosition(worldPosition));
-            }
-
-            return null;
-        }
-
-        public Vector3I GetLightLevel(Vector3I worldPosition)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                return _chunks[chunkPosition].GetLightLevel(WorldToLocalPosition(worldPosition));
-            }
-
-            return Vector3I.Zero;
-        }
-
-        public void SetLightLevel(Vector3I worldPosition, Vector3I lightLevel)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-            var localPosition = WorldToLocalPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                _chunks[chunkPosition].SetLightLevel(localPosition, lightLevel);
-            }
-        }
-
-        private Vector2I WorldToChunkPosition(Vector3 worldPosition)
-        {
-            return new Vector2I(
-                Mathf.FloorToInt(worldPosition.X / Configuration.CHUNK_DIMENSION.X),
-                Mathf.FloorToInt(worldPosition.Z / Configuration.CHUNK_DIMENSION.Z)
-            );
-        }
-
-        private Vector3I WorldToLocalPosition(Vector3 worldPosition)
-        {
-            int x = (int)((worldPosition.X % Configuration.CHUNK_DIMENSION.X + Configuration.CHUNK_DIMENSION.X) % Configuration.CHUNK_DIMENSION.X);
-            int y = (int)((worldPosition.Y % Configuration.CHUNK_DIMENSION.Y + Configuration.CHUNK_DIMENSION.Y) % Configuration.CHUNK_DIMENSION.Y);
-            int z = (int)((worldPosition.Z % Configuration.CHUNK_DIMENSION.Z + Configuration.CHUNK_DIMENSION.Z) % Configuration.CHUNK_DIMENSION.Z);
-
-            return new Vector3I(x, y, z);
         }
 
         private void BreakBlock(Vector3I worldPosition)
@@ -314,38 +312,32 @@ namespace Aeon
             var localPosition = WorldToLocalPosition(worldPosition);
 
             _chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get(block));
-            RenderChunk(chunkPosition);
 
             if (localPosition.X < 1)
             {
-                RenderChunk(chunkPosition + Vector2I.Left);
+                _chunks[chunkPosition + Vector3I.Left].NeedsToBeRendered = true;
             }
             else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
             {
-                RenderChunk(chunkPosition + Vector2I.Right);
+                _chunks[chunkPosition + Vector3I.Right].NeedsToBeRendered = true;
             }
+
+            if (localPosition.Y < 1 && chunkPosition.Y > 0)
+            {
+                _chunks[chunkPosition + Vector3I.Down].NeedsToBeRendered = true;
+            }
+            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2 && chunkPosition.Y < Configuration.VERTICAL_CHUNKS - 1)
+            {
+                _chunks[chunkPosition + Vector3I.Up].NeedsToBeRendered = true;
+            }
+
             if (localPosition.Z < 1)
             {
-                RenderChunk(chunkPosition + Vector2I.Up);
+                _chunks[chunkPosition + Vector3I.Forward].NeedsToBeRendered = true;
             }
             else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
             {
-                RenderChunk(chunkPosition + Vector2I.Down);
-            }
-        }
-
-        private void LogAverages()
-        {
-            if (_generationCount > 0)
-            {
-                var averageGenerationTime = _totalGenerationTime / _generationCount;
-                GD.Print($"Average Generation Time: {averageGenerationTime} ms");
-            }
-
-            if (_renderingCount > 0)
-            {
-                var averageRenderingTime = _totalRenderingTime / _renderingCount;
-                GD.Print($"Average Rendering Time: {averageRenderingTime} ms");
+                _chunks[chunkPosition + Vector3I.Back].NeedsToBeRendered = true;
             }
         }
     }

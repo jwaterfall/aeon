@@ -53,9 +53,9 @@ namespace Aeon
             return height;
         }
 
-        public BlockType GetBlockType(Vector3I globalPosition, int height, int waterLevel = 64)
+        public Block GetBlockType(Vector3I globalPosition, int height, int waterLevel = 64)
         {
-            BlockType blockType = BlockTypes.Instance.Get("air");
+            Block blockType = BlockTypes.Instance.Get("air");
 
             if (globalPosition.Y > height && globalPosition.Y <= waterLevel)
             {

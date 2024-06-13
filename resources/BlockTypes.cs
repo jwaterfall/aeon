@@ -26,7 +26,7 @@ public class Face
     public List<float> UV;
 }
 
-public class BlockType
+public class Block
 {
     public byte Id;
     public string Name;
@@ -84,7 +84,7 @@ namespace Aeon
         protected string modelsDirectory = "data/models";
         protected string extension = ".yaml";
         public bool loaded = false;
-        public ConcurrentDictionary<byte, BlockType> blockTypesMap = new();
+        public ConcurrentDictionary<byte, Block> blockTypesMap = new();
         protected ConcurrentDictionary<string, byte> nameToIdMap = new();
 
         private static BlockTypes _instance;
@@ -103,12 +103,12 @@ namespace Aeon
 
         private BlockTypes() { }
 
-        public BlockType Get(byte id)
+        public Block Get(byte id)
         {
             return blockTypesMap.ContainsKey(id) ? blockTypesMap[id] : null;
         }
 
-        public BlockType Get(string name)
+        public Block Get(string name)
         {
             var id = nameToIdMap.ContainsKey(name) ? nameToIdMap[name] : (byte)0;
             return Get(id);
@@ -178,7 +178,7 @@ namespace Aeon
 
             var id = (byte)blockTypesMap.Count;
 
-            var blockType = new BlockType
+            var blockType = new Block
             {
                 Id = id,
                 Name = name,

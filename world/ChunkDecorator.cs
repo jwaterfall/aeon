@@ -22,7 +22,7 @@ namespace Aeon
             GenerateTrees(terrainGenerator);
         }
 
-        private void SetBlockInOrOut(Vector3I localPosition, BlockType blockType)
+        private void SetBlockInOrOut(Vector3I localPosition, Block blockType)
         {
             if (_chunk.IsInChunk(localPosition))
             {
@@ -72,7 +72,8 @@ namespace Aeon
             {
                 for (int z = 0; z < _chunk.Dimensions.Z; z++)
                 {
-                    int height = terrainGenerator.GetHeight(_chunk.ChunkPosition * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Y) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int height = worldHeight - _chunk.ChunkPosition.Y * _chunk.Dimensions.Y;
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
 
                     Vector3I blockBelowPosition = new Vector3I(x, height, z);
@@ -95,7 +96,8 @@ namespace Aeon
                 {
                     if (random.NextDouble() > 0.005f) continue;
 
-                    int height = terrainGenerator.GetHeight(_chunk.ChunkPosition * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Y) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int height = worldHeight - _chunk.ChunkPosition.Y * _chunk.Dimensions.Y;
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
 
                     var blockBelow = _chunk.GetBlock(new Vector3I(x, height, z));

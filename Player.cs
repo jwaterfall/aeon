@@ -140,7 +140,10 @@ namespace Aeon
                 }
                 else if (Input.IsActionJustPressed("Place"))
                 {
-                    customSignals.EmitSignal(nameof(CustomSignals.PlaceBlock), worldPosition + normal, "glowstone");
+                    var choices = new string[] { "red_glowstone", "green_glowstone", "blue_glowstone" };
+                    var random = new System.Random();
+                    var choice = choices[random.Next(choices.Length)];
+                    customSignals.EmitSignal(nameof(CustomSignals.PlaceBlock), worldPosition + normal, choice);
                 }
             }
             else

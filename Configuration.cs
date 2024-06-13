@@ -4,7 +4,8 @@ namespace Aeon
 {
     public partial class Configuration : Node
     {
-        public static readonly Vector3I CHUNK_DIMENSION = new(16, 256, 16);
+        public static readonly Vector3I CHUNK_DIMENSION = new(32, 32, 32);
+        public static readonly int VERTICAL_CHUNKS = 8;
         public static readonly float MOUSE_SENSITIVITY = 0.3f;
         public static readonly float MOVEMENT_SPEED = 8;
         public static readonly float FLYING_SPEED = 50;

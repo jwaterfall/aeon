@@ -18,8 +18,8 @@ namespace Aeon
             return (localPosition.Y * _dimensions.Z * _dimensions.X) + (localPosition.Z * _dimensions.X) + localPosition.X;
         }
 
-        public abstract BlockType GetBlock(Vector3I localPosition);
-        public abstract void SetBlock(Chunk chunk, Vector3I localPosition, BlockType blockType);
+        public abstract Block GetBlock(Vector3I localPosition);
+        public abstract void SetBlock(Chunk chunk, Vector3I localPosition, Block blockType);
         public abstract void Optimize(Chunk chunk);
     }
 
@@ -39,8 +39,8 @@ namespace Aeon
             return (localPosition.Y * _dimensions.X) + localPosition.X;
         }
 
-        public abstract BlockType GetBlock(Vector2I localPosition);
-        public abstract void SetBlock(StandardChunkData chunkData, Vector2I localPosition, BlockType blockType);
+        public abstract Block GetBlock(Vector2I localPosition);
+        public abstract void SetBlock(StandardChunkData chunkData, Vector2I localPosition, Block blockType);
         public abstract void Optimize(StandardChunkData chunkData);
     }
 
@@ -58,12 +58,12 @@ namespace Aeon
             _blocks = new byte[dimensions.X * dimensions.Y];
         }
 
-        public override BlockType GetBlock(Vector2I localPosition)
+        public override Block GetBlock(Vector2I localPosition)
         {
             return BlockTypes.Instance.Get(_blocks[GetIndex(localPosition)]);
         }
 
-        public override void SetBlock(StandardChunkData chunkData, Vector2I localPosition, BlockType blockType)
+        public override void SetBlock(StandardChunkData chunkData, Vector2I localPosition, Block blockType)
         {
             _blocks[GetIndex(localPosition)] = blockType.Id;
         }
@@ -80,19 +80,19 @@ namespace Aeon
 
     public class SingleBlockChunkLayerData : ChunkLayerData
     {
-        private readonly BlockType _block;
+        private readonly Block _block;
 
-        public SingleBlockChunkLayerData(Vector2I dimensions, BlockType block, int layerIndex) : base(dimensions, layerIndex)
+        public SingleBlockChunkLayerData(Vector2I dimensions, Block block, int layerIndex) : base(dimensions, layerIndex)
         {
             _block = block;
         }
 
-        public override BlockType GetBlock(Vector2I localPosition)
+        public override Block GetBlock(Vector2I localPosition)
         {
             return _block;
         }
 
-        public override void SetBlock(StandardChunkData chunkData, Vector2I localPosition, BlockType blockType)
+        public override void SetBlock(StandardChunkData chunkData, Vector2I localPosition, Block blockType)
         {
             var blocks = Enumerable.Repeat(_block.Id, _dimensions.X * _dimensions.Y).ToArray();
             blocks[GetIndex(localPosition)] = blockType.Id;
@@ -125,12 +125,12 @@ namespace Aeon
             }
         }
 
-        public override BlockType GetBlock(Vector3I localPosition)
+        public override Block GetBlock(Vector3I localPosition)
         {
             return _layers[localPosition.Y].GetBlock(new Vector2I(localPosition.X, localPosition.Z));
         }
 
-        public override void SetBlock(Chunk chunk, Vector3I localPosition, BlockType blockType)
+        public override void SetBlock(Chunk chunk, Vector3I localPosition, Block blockType)
         {
             _layers[localPosition.Y].SetBlock(this, new Vector2I(localPosition.X, localPosition.Z), blockType);
         }
@@ -161,19 +161,19 @@ namespace Aeon
 
     public class SingleBlockChunkData : ChunkData
     {
-        private readonly BlockType _block;
+        private readonly Block _block;
 
-        public SingleBlockChunkData(Vector3I dimensions, BlockType block) : base(dimensions)
+        public SingleBlockChunkData(Vector3I dimensions, Block block) : base(dimensions)
         {
             _block = block;
         }
 
-        public override BlockType GetBlock(Vector3I localPosition)
+        public override Block GetBlock(Vector3I localPosition)
         {
             return _block;
         }
 
-        public override void SetBlock(Chunk chunk, Vector3I localPosition, BlockType blockType)
+        public override void SetBlock(Chunk chunk, Vector3I localPosition, Block blockType)
         {
             var chunkData = new StandardChunkData(_dimensions);
             var layers = new ChunkLayerData[_dimensions.Y];

@@ -86,11 +86,17 @@ namespace Aeon
             _collisionSurfaceTool = null;
         }
 
-        private bool IsVisible(Vector3I localPosition, Direction faceToCheck, BlockType sourceBlockType)
+        private bool IsVisible(Vector3I localPosition, Direction faceToCheck, Block sourceBlockType)
         {
-            var blockType = !_chunk.IsInChunk(localPosition)
-                ? _chunkManager.GetBlock(_chunk.GetWorldPosition(localPosition))
-                : _chunk.GetBlock(localPosition);
+            if (
+                _chunk.ChunkPosition.Y == 0 && localPosition.Y < 0 ||
+                _chunk.ChunkPosition.Y == Configuration.VERTICAL_CHUNKS - 1 && localPosition.Y >= Configuration.CHUNK_DIMENSION.Y
+                )
+            {
+                return true;
+            }
+
+            var blockType = _chunkManager.GetBlock(_chunk.GetWorldPosition(localPosition));
 
             return blockType.Occludes.Contains(faceToCheck) == false || (blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf));
         }
@@ -180,7 +186,7 @@ namespace Aeon
 
             foreach (var blockPosition in sorroundingBlocks)
             {
-                var light = _chunkManager.GetLightLevel(_chunk.GetWorldPosition(blockPosition));
+                var light = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(blockPosition));
                 if (light == Vector3.Zero) continue;
 
                 lightLevel += light;
@@ -192,7 +198,7 @@ namespace Aeon
             return new Color(lightLevel.X / 15.0f, lightLevel.Y / 15.0f, lightLevel.Z / 15.0f);
         }
 
-        private void GenerateFace(Face face, Vector3I localPosition, BlockType blockType)
+        private void GenerateFace(Face face, Vector3I localPosition, Block blockType)
         {
             var uvOffset = face.TextureAtlasOffset / BlockTextures.Instance.size;
             var height = 1.0f / BlockTextures.Instance.size.Y;
