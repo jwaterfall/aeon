@@ -1,7 +1,4 @@
 using Godot;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Aeon
 {
@@ -56,6 +53,8 @@ namespace Aeon
                 }
             }
 
+            _lightManager.PropagateNeighborLight();
+
             _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             _chunkData.Optimize(this);
@@ -96,11 +95,6 @@ namespace Aeon
             return localPosition.X >= 0 && localPosition.X < Dimensions.X &&
                    localPosition.Y >= 0 && localPosition.Y < Dimensions.Y &&
                    localPosition.Z >= 0 && localPosition.Z < Dimensions.Z;
-        }
-
-        public void Update()
-        {
-            _lightManager.Update();
         }
 
         protected int GetIndex(Vector3I localPosition)

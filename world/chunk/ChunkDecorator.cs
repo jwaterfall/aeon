@@ -22,18 +22,6 @@ namespace Aeon
             GenerateTrees(terrainGenerator);
         }
 
-        private void SetBlockInOrOut(Vector3I localPosition, Block blockType)
-        {
-            if (_chunk.IsInChunk(localPosition))
-            {
-                _chunk.SetBlock(localPosition, blockType);
-            }
-            else
-            {
-                _chunkManager.SetBlock(_chunk.GetWorldPosition(localPosition), blockType);
-            }
-        }
-
         private void GenerateOres(WorldPreset worldPreset)
         {
             var random = new Random();
@@ -58,7 +46,7 @@ namespace Aeon
 
                         if (_chunk.IsInChunk(localPosition))
                         {
-                            SetBlockInOrOut(localPosition, BlockTypes.Instance.Get(ore.Block));
+                            _chunkManager.SetBlock(_chunk.GetWorldPosition(localPosition), BlockTypes.Instance.Get(ore.Block));
                         }
                     }
                 }
@@ -68,11 +56,12 @@ namespace Aeon
         private void GenerateGrass(TerrainGenerator terrainGenerator)
         {
             var random = new Random();
+
             for (int x = 0; x < _chunk.Dimensions.X; x++)
             {
                 for (int z = 0; z < _chunk.Dimensions.Z; z++)
                 {
-                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Y) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Z) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
                     int height = worldHeight - _chunk.ChunkPosition.Y * _chunk.Dimensions.Y;
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
 
@@ -81,7 +70,7 @@ namespace Aeon
 
                     if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.025f)
                     {
-                        SetBlockInOrOut(new Vector3I(x, height + 1, z), BlockTypes.Instance.Get("short_grass"));
+                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height + 1, z)), BlockTypes.Instance.Get("short_grass"));
                     }
                 }
             }
@@ -96,7 +85,7 @@ namespace Aeon
                 {
                     if (random.NextDouble() > 0.005f) continue;
 
-                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Y) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
+                    int worldHeight = terrainGenerator.GetHeight(new Vector2I(_chunk.ChunkPosition.X, _chunk.ChunkPosition.Z) * new Vector2I(_chunk.Dimensions.X, _chunk.Dimensions.Z) + new Vector2I(x, z));
                     int height = worldHeight - _chunk.ChunkPosition.Y * _chunk.Dimensions.Y;
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
 
@@ -104,7 +93,7 @@ namespace Aeon
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     int trunkHeight = random.Next(5, 7);
-                    SetBlockInOrOut(new Vector3I(x, height, z), BlockTypes.Instance.Get("dirt"));
+                    _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height, z)), BlockTypes.Instance.Get("dirt"));
                     GenerateTreeTrunk(height, trunkHeight, x, z);
                     GenerateTreeLeaves(height, trunkHeight, x, z);
                 }
@@ -115,7 +104,7 @@ namespace Aeon
         {
             for (int y = 1; y <= trunkHeight; y++)
             {
-                SetBlockInOrOut(new Vector3I(x, localHeight + y, z), BlockTypes.Instance.Get("spruce_log"));
+                _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, localHeight + y, z)), BlockTypes.Instance.Get("spruce_log"));
             }
         }
 
@@ -131,7 +120,7 @@ namespace Aeon
                 {
                     for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
                     {
-                        SetBlockInOrOut(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
+                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }
@@ -145,7 +134,7 @@ namespace Aeon
                 {
                     for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
                     {
-                        SetBlockInOrOut(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset), BlockTypes.Instance.Get("spruce_leaves"));
+                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }

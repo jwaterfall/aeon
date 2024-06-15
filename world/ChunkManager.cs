@@ -149,11 +149,6 @@ namespace Aeon
 
             GenerateChunks(playerChunkPosition, terrainGenerator);
 
-            foreach (var chunk in _chunks.Values)
-            {
-                chunk.Update();
-            }
-
             for (int i = 0; i < _chunksToRemove.Count; i++)
             {
                 var chunkPosition = _chunksToRemove.Dequeue();

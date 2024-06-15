@@ -1,6 +1,7 @@
 ﻿using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Aeon
 {
@@ -27,7 +28,92 @@ namespace Aeon
             _chunkManager = chunkManager;
         }
 
-        public void Update()
+        private Vector3I[] GetNeighbors(Vector3I localPosition)
+        {
+            return new Vector3I[]
+            {
+                localPosition + new Vector3I(1, 0, 0),
+                localPosition + new Vector3I(-1, 0, 0),
+                localPosition + new Vector3I(0, 1, 0),
+                localPosition + new Vector3I(0, -1, 0),
+                localPosition + new Vector3I(0, 0, 1),
+                localPosition + new Vector3I(0, 0, -1),
+            };
+        }
+
+        private Vector3I SetVectorWithChannel(Vector3I localPosition, Vector3I value, Vector3I channel, bool keepMax = false)
+        {
+            var existingValue = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(localPosition));
+            var existingChannelValue = existingValue * channel;
+            var newChannelValue = keepMax && existingChannelValue > value * channel ? existingChannelValue : value * channel;
+            var newValue = existingValue - existingChannelValue + newChannelValue;
+            return newValue;
+        }
+
+        public Vector3I GetLightLevel(Vector3I localPosition)
+        {
+            return _lightData.Get(localPosition);
+        }
+
+        public void SetLightLevel(Vector3I localPosition, Vector3I lightLevel)
+        {
+            _lightData.Set(localPosition, lightLevel);
+        }
+
+        public void PropagateNeighborLight()
+        {
+            foreach (var x in new int[] { -1, Configuration.CHUNK_DIMENSION.X })
+            {
+                foreach (var y in new int[] { -1, Configuration.CHUNK_DIMENSION.Y })
+                {
+                    foreach (var z in new int[] { -1, Configuration.CHUNK_DIMENSION.Z })
+                    {
+                        var localPosition = new Vector3I(x, y, z);
+                        var worldPosition = _chunk.GetWorldPosition(localPosition);
+                        var lightLevel = _chunkManager.GetBlockLightLevel(worldPosition);
+
+                        foreach (var channel in channels)
+                        {
+                            if (lightLevel * channel > Vector3I.Zero)
+                            {
+                                _lightPropagationQueue.Enqueue((localPosition, lightLevel * channel, channel));
+                            }
+                        }
+                    }
+                }
+            }
+
+            Propagate();
+        }
+
+        public void AddLightSource(Vector3I localPosition, Vector3I lightLevel)
+        {
+            foreach (var channel in channels)
+            {
+                if (lightLevel * channel > Vector3I.Zero)
+                {
+                    _lightPropagationQueue.Enqueue((localPosition, lightLevel * channel, channel));
+                }
+            }
+
+            Propagate();
+        }
+
+        public void RemoveLightSource(Vector3I localPosition, Vector3I lightLevel)
+        {
+            foreach (var channel in channels)
+            {
+                if (lightLevel * channel > Vector3I.Zero)
+                {
+                    _darknessPropagationQueue.Enqueue((localPosition, channel));
+                    _lightRepairQueue.Enqueue(localPosition);
+                }
+            }
+
+            Propagate();
+        }
+
+        private void Propagate()
         {
             while (_darknessPropagationQueue.Count > 0)
             {
@@ -76,6 +162,8 @@ namespace Aeon
                     var neighborLightLevel = _chunkManager.GetBlockLightLevel(neighborWorldPosition) * channel;
                     var neighborBlockType = _chunkManager.GetBlock(neighborWorldPosition);
 
+                    if (neighborBlockType == null) continue;
+
                     var newNeighborLightLevel = newChannelLightLevel - channel;
 
                     if (neighborBlockType.Transparent && neighborLightLevel < newNeighborLightLevel && !_lightPropagationQueue.Contains((neighbor, newNeighborLightLevel, channel)))
@@ -102,63 +190,6 @@ namespace Aeon
                             _lightPropagationQueue.Enqueue((neighbor, neighborChannelLightLevel, channel));
                         }
                     }
-                }
-            }
-        }
-
-        private Vector3I[] GetNeighbors(Vector3I localPosition)
-        {
-            return new Vector3I[]
-            {
-                localPosition + new Vector3I(1, 0, 0),
-                localPosition + new Vector3I(-1, 0, 0),
-                localPosition + new Vector3I(0, 1, 0),
-                localPosition + new Vector3I(0, -1, 0),
-                localPosition + new Vector3I(0, 0, 1),
-                localPosition + new Vector3I(0, 0, -1),
-            };
-        }
-
-        private Vector3I SetVectorWithChannel(Vector3I localPosition, Vector3I value, Vector3I channel, bool keepMax = false)
-        {
-            var existingValue = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(localPosition));
-            var existingChannelValue = existingValue * channel;
-            var newChannelValue = keepMax && existingChannelValue > value * channel ? existingChannelValue : value * channel;
-            var newValue = existingValue - existingChannelValue + newChannelValue;
-            return newValue;
-        }
-
-        public Vector3I GetLightLevel(Vector3I localPosition)
-        {
-            return _lightData.Get(localPosition);
-        }
-
-        public void SetLightLevel(Vector3I localPosition, Vector3I lightLevel)
-        {
-            _lightData.Set(localPosition, lightLevel);
-        }
-
-        public void AddLightSource(Vector3I localPosition, Vector3I lightLevel)
-        {
-            GD.Print("Adding light source");
-            foreach (var channel in channels)
-            {
-                if (lightLevel * channel > Vector3I.Zero)
-                {
-                    GD.Print("Adding channel", channel);
-                    _lightPropagationQueue.Enqueue((localPosition, lightLevel * channel, channel));
-                }
-            }
-        }
-
-        public void RemoveLightSource(Vector3I localPosition, Vector3I lightLevel)
-        {
-            foreach (var channel in channels)
-            {
-                if (lightLevel * channel > Vector3I.Zero)
-                {
-                    _darknessPropagationQueue.Enqueue((localPosition, channel));
-                    _lightRepairQueue.Enqueue(localPosition);
                 }
             }
         }
