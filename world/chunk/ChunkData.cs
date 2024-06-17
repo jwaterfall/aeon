@@ -2,7 +2,7 @@
 using System;
 using System.Linq;
 
-namespace Aeon
+namespace Aeon.World
 {
     public abstract class ChunkData
     {

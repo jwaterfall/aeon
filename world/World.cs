@@ -1,17 +1,18 @@
 using Godot;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Aeon
+namespace Aeon.World
 {
     /// <summary>
-    /// Class <c>ChunkManager</c> is responsible for managing the generation, decoration, rendering, and removal of chunks. It also provides methods for getting and setting blocks and light levels.
+    /// Class <c>World</c> is responsible for managing the generation, decoration, rendering, and removal of chunks. It also provides methods for getting and setting blocks and light levels.
     /// </summary>
-    public partial class ChunkManager : Node3D
+    public partial class World : Node3D
     {
+        private Player _player;
+        private TerrainGenerator _terrainGenerator;
         private Vector3I? _lastPlayerChunkPosition;
         private readonly PackedScene _chunkScene = ResourceLoader.Load("res://world/Chunk.tscn") as PackedScene;
 
@@ -22,6 +23,7 @@ namespace Aeon
 
         private Task[] _tasks = new Task[OS.GetProcessorCount() - 2];
         private Task _renderTask;
+
 
         /// <summary>
         /// Method <c>GetBlock</c> gets the block at the given world position.
@@ -99,7 +101,7 @@ namespace Aeon
             if (_chunks.ContainsKey(chunkPosition))
             {
                 _chunks[chunkPosition].SetLightLevel(localPosition, lightLevel);
-            }   
+            }
         }
 
         public byte GetSkyLightLevel(Vector3I worldPosition)
@@ -149,74 +151,7 @@ namespace Aeon
             return new Vector3I(x, y, z);
         }
 
-        public override void _Ready()
-        {
-            var customSignals = GetNode<CustomSignals>("/root/CustomSignals");
-            customSignals.BreakBlock += BreakBlock;
-            customSignals.PlaceBlock += PlaceBlock;
-        }
-
-        public void Update(Vector3 playerPosition, TerrainGenerator terrainGenerator)
-        {
-            var playerChunkPosition = WorldToChunkPosition(playerPosition);
-
-            var orderedChunks = _chunks.Values
-                .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition));
-
-            var chunksToRender = orderedChunks
-                .Where(chunk => CanRenderChunk(chunk.ChunkPosition) && chunk.NeedsToBeRendered)
-                .Select(chunk => chunk.ChunkPosition)
-                .ToList();
-
-            RenderChunks(chunksToRender);
-
-            GenerateChunks(playerChunkPosition, terrainGenerator);
-
-            for (int i = 0; i < _chunksToRemove.Count; i++)
-            {
-                var chunkPosition = _chunksToRemove.Dequeue();
-
-                if (_chunks.TryRemove(chunkPosition, out var chunk))
-                {
-                    chunk.QueueFree();
-                }
-                else
-                {
-                    _chunksToRemove.Enqueue(chunkPosition);
-                }
-            }
-
-            if (_lastPlayerChunkPosition != playerChunkPosition)
-            {
-                _lastPlayerChunkPosition = playerChunkPosition;
-
-                var nearbyChunkPositions = new HashSet<Vector3I>(GetNearbyChunkPositions(playerChunkPosition));
-
-                // Remove chunks that are no longer nearby
-                foreach (var chunkPosition in _chunks.Keys.Except(nearbyChunkPositions).ToList())
-                {
-                    if (_chunks.TryRemove(chunkPosition, out var chunk))
-                    {
-                        chunk.QueueFree();
-                    }
-                    else
-                    {
-                        _chunksToRemove.Enqueue(chunkPosition);
-                    }
-                }
-
-                // Add chunks that are now nearby
-                foreach (var chunkPosition in nearbyChunkPositions.Except(_chunks.Keys))
-                {
-                    if (!_chunks.ContainsKey(chunkPosition) && !_chunksToGenerate.Contains(chunkPosition))
-                    {
-                        _chunksToGenerate.Enqueue(chunkPosition);
-                    }
-                }
-            }
-        }
-
-        private void GenerateChunks(Vector3I playerChunkPosition, TerrainGenerator terrainGenerator)
+        private void GenerateChunks(Vector3I playerChunkPosition)
         {
             var sortedChunksToGenerate = _chunksToGenerate
                 .OrderBy(chunkPosition => ((Vector3)chunkPosition).DistanceTo(playerChunkPosition))
@@ -229,7 +164,7 @@ namespace Aeon
                 {
                     var chunkPosition = sortedChunksToGenerate[0];
                     sortedChunksToGenerate.RemoveAt(0);
-                    _chunksToGenerate = new (sortedChunksToGenerate); // Update the queue
+                    _chunksToGenerate = new(sortedChunksToGenerate); // Update the queue
 
                     var chunk = _chunkScene.Instantiate<Chunk>();
                     chunk.Initialize(this, chunkPosition);
@@ -241,7 +176,7 @@ namespace Aeon
                     {
                         if (!chunk.IsGenerated)
                         {
-                            chunk.Generate(terrainGenerator, WorldPresets.Instance.Get("default"));
+                            chunk.Generate(_terrainGenerator, WorldPresets.Instance.Get("default"));
 
                             if (_blocksToPlace.ContainsKey(chunkPosition))
                             {
@@ -358,6 +293,84 @@ namespace Aeon
             else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
             {
                 _chunks[chunkPosition + Vector3I.Back].Render();
+            }
+        }
+
+        public override void _Ready()
+        {
+            BlockTypes.Instance.Load(BlockTextures.Instance.Load());
+            WorldPresets.Instance.Load();
+
+            _player = GetNode<Player>("Player");
+            _terrainGenerator = GetNode<TerrainGenerator>("/root/TerrainGenerator");
+
+            var customSignals = GetNode<CustomSignals>("/root/CustomSignals");
+            customSignals.BreakBlock += BreakBlock;
+            customSignals.PlaceBlock += PlaceBlock;
+        }
+
+        public override void _Process(double delta)
+        {
+            if (!BlockTextures.Instance.loaded || !BlockTypes.Instance.loaded || !_terrainGenerator.initialized)
+            {
+                return;
+            }
+
+            var playerChunkPosition = WorldToChunkPosition(_player.Position);
+
+            var orderedChunks = _chunks.Values
+                .OrderBy(chunk => ((Vector3)chunk.ChunkPosition).DistanceTo(playerChunkPosition));
+
+            var chunksToRender = orderedChunks
+                .Where(chunk => CanRenderChunk(chunk.ChunkPosition) && chunk.NeedsToBeRendered)
+                .Select(chunk => chunk.ChunkPosition)
+                .ToList();
+
+            RenderChunks(chunksToRender);
+
+            GenerateChunks(playerChunkPosition);
+
+            for (int i = 0; i < _chunksToRemove.Count; i++)
+            {
+                var chunkPosition = _chunksToRemove.Dequeue();
+
+                if (_chunks.TryRemove(chunkPosition, out var chunk))
+                {
+                    chunk.QueueFree();
+                }
+                else
+                {
+                    _chunksToRemove.Enqueue(chunkPosition);
+                }
+            }
+
+            if (_lastPlayerChunkPosition != playerChunkPosition)
+            {
+                _lastPlayerChunkPosition = playerChunkPosition;
+
+                var nearbyChunkPositions = new HashSet<Vector3I>(GetNearbyChunkPositions(playerChunkPosition));
+
+                // Remove chunks that are no longer nearby
+                foreach (var chunkPosition in _chunks.Keys.Except(nearbyChunkPositions).ToList())
+                {
+                    if (_chunks.TryRemove(chunkPosition, out var chunk))
+                    {
+                        chunk.QueueFree();
+                    }
+                    else
+                    {
+                        _chunksToRemove.Enqueue(chunkPosition);
+                    }
+                }
+
+                // Add chunks that are now nearby
+                foreach (var chunkPosition in nearbyChunkPositions.Except(_chunks.Keys))
+                {
+                    if (!_chunks.ContainsKey(chunkPosition) && !_chunksToGenerate.Contains(chunkPosition))
+                    {
+                        _chunksToGenerate.Enqueue(chunkPosition);
+                    }
+                }
             }
         }
     }

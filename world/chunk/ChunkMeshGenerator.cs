@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Aeon
+namespace Aeon.World
 {
     public class ChunkMeshGenerator
     {
@@ -30,7 +30,7 @@ namespace Aeon
         private SurfaceTool _transparentSurfaceTool;
         private SurfaceTool _collisionSurfaceTool;
         private Chunk _chunk;
-        private ChunkManager _chunkManager;
+        private World _world;
 
         public ArrayMesh Mesh { get; private set; }
         public ArrayMesh TransparentMesh { get; private set; }
@@ -38,7 +38,7 @@ namespace Aeon
         public ShaderMaterial Material { get; private set; } = new();
         public ShaderMaterial TransparentMaterial { get; private set; } = new();
 
-        public ChunkMeshGenerator(Chunk chunk, ChunkManager chunkManager)
+        public ChunkMeshGenerator(Chunk chunk, World world)
         {
             Material.Shader = GD.Load<Shader>("res://shaders/Standard.gdshader");
             Material.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
@@ -47,7 +47,7 @@ namespace Aeon
             TransparentMaterial.SetShaderParameter("texture_sampler", BlockTextures.Instance.TextureAtlasTexture);
 
             _chunk = chunk;
-            _chunkManager = chunkManager;
+            _world = world;
         }
 
         private void InitializeSurfaceTools()
@@ -95,7 +95,7 @@ namespace Aeon
                 return true;
             }
 
-            var blockType = _chunkManager.GetBlock(_chunk.GetWorldPosition(localPosition));
+            var blockType = _world.GetBlock(_chunk.GetWorldPosition(localPosition));
 
             return blockType.Occludes.Contains(faceToCheck) == false || blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf);
         }
@@ -185,8 +185,8 @@ namespace Aeon
 
             foreach (var blockPosition in sorroundingBlocks)
             {
-                var light = _chunkManager.GetBlockLightLevel(_chunk.GetWorldPosition(blockPosition));
-                var skyLight = _chunkManager.GetSkyLightLevel(_chunk.GetWorldPosition(blockPosition));
+                var light = _world.GetBlockLightLevel(_chunk.GetWorldPosition(blockPosition));
+                var skyLight = _world.GetSkyLightLevel(_chunk.GetWorldPosition(blockPosition));
 
                 Vector3I combinedLight = new(skyLight, skyLight, skyLight);
 

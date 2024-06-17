@@ -1,7 +1,6 @@
 ﻿using Godot;
-using System;
 
-namespace Aeon
+namespace Aeon.World
 {
     class ChunkRGBLightData
     {

@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://bt8r1sncvbh6k"]
+[gd_scene load_steps=6 format=3 uid="uid://bt8r1sncvbh6k"]
 
-[ext_resource type="Script" path="res://World.cs" id="1_46msp"]
+[ext_resource type="Script" path="res://world/World.cs" id="1_itfrb"]
 [ext_resource type="PackedScene" uid="uid://bbl3jau5jl6ix" path="res://Player.tscn" id="2_52x8a"]
-[ext_resource type="Script" path="res://world/ChunkManager.cs" id="3_kumx2"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_oimwr"]
 sky_energy_multiplier = 1.5
@@ -22,13 +21,10 @@ fog_light_energy = 0.6
 fog_sky_affect = 0.6
 
 [node name="World" type="Node3D"]
-script = ExtResource("1_46msp")
+script = ExtResource("1_itfrb")
 
 [node name="Player" parent="." instance=ExtResource("2_52x8a")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 256, 16)
-
-[node name="ChunkManager" type="Node3D" parent="."]
-script = ExtResource("3_kumx2")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_p7a2h")

@@ -1,6 +1,4 @@
-using Aeon;
 using Godot;
-using System;
 
 namespace Aeon
 {

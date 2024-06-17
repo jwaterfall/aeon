@@ -94,6 +94,8 @@ namespace Aeon
 
         public bool IsCave(Vector3I globalPosition)
         {
+            return false;
+
             var isNoodleCave = Mathf.Abs(noodleCaveNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z)) < noodleCaveNoiseThreshold &&
                 Mathf.Abs(noodleCaveSecondaryNoise.GetNoise3D(globalPosition.X, globalPosition.Y, globalPosition.Z)) < noodleCaveNoiseThreshold;
 

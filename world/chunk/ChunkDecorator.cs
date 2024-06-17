@@ -2,17 +2,17 @@
 using System;
 using System.Collections.Generic;
 
-namespace Aeon
+namespace Aeon.World
 {
     internal class ChunkDecorator
     {
         private Chunk _chunk;
-        private ChunkManager _chunkManager;
+        private World _world;
 
-        public ChunkDecorator(Chunk chunk, ChunkManager chunkManager)
+        public ChunkDecorator(Chunk chunk, World world)
         {
             _chunk = chunk;
-            _chunkManager = chunkManager;
+            _world = world;
         }
 
         public void Decorate(TerrainGenerator terrainGenerator, WorldPreset worldPreset)
@@ -46,7 +46,7 @@ namespace Aeon
 
                         if (_chunk.IsInChunk(localPosition))
                         {
-                            _chunkManager.SetBlock(_chunk.GetWorldPosition(localPosition), BlockTypes.Instance.Get(ore.Block));
+                            _world.SetBlock(_chunk.GetWorldPosition(localPosition), BlockTypes.Instance.Get(ore.Block));
                         }
                     }
                 }
@@ -66,11 +66,11 @@ namespace Aeon
                     if (height < 0 || height > _chunk.Dimensions.Y - 2) continue;
 
                     Vector3I blockBelowPosition = new Vector3I(x, height, z);
-                    var blockBelow = _chunk.IsInChunk(blockBelowPosition) ? _chunk.GetBlock(blockBelowPosition) : _chunkManager.GetBlock(_chunk.GetWorldPosition(blockBelowPosition));
+                    var blockBelow = _chunk.IsInChunk(blockBelowPosition) ? _chunk.GetBlock(blockBelowPosition) : _world.GetBlock(_chunk.GetWorldPosition(blockBelowPosition));
 
                     if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.025f)
                     {
-                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height + 1, z)), BlockTypes.Instance.Get("short_grass"));
+                        _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height + 1, z)), BlockTypes.Instance.Get("short_grass"));
                     }
                 }
             }
@@ -93,7 +93,7 @@ namespace Aeon
                     if (blockBelow.Name != "grass" && blockBelow.Name != "snow") continue;
 
                     int trunkHeight = random.Next(5, 7);
-                    _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height, z)), BlockTypes.Instance.Get("dirt"));
+                    _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height, z)), BlockTypes.Instance.Get("dirt"));
                     GenerateTreeTrunk(height, trunkHeight, x, z);
                     GenerateTreeLeaves(height, trunkHeight, x, z);
                 }
@@ -104,7 +104,7 @@ namespace Aeon
         {
             for (int y = 1; y <= trunkHeight; y++)
             {
-                _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, localHeight + y, z)), BlockTypes.Instance.Get("spruce_log"));
+                _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, localHeight + y, z)), BlockTypes.Instance.Get("spruce_log"));
             }
         }
 
@@ -120,7 +120,7 @@ namespace Aeon
                 {
                     for (int zOffset = -brimWidth; zOffset <= brimWidth; zOffset++)
                     {
-                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
+                        _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }
@@ -134,7 +134,7 @@ namespace Aeon
                 {
                     for (int zOffset = -topWidth; zOffset <= topWidth; zOffset++)
                     {
-                        _chunkManager.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
+                        _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x + xOffset, localHeight + trunkHeight + brimHeight + y, z + zOffset)), BlockTypes.Instance.Get("spruce_leaves"));
                     }
                 }
             }

@@ -1,6 +1,6 @@
 using Godot;
 
-namespace Aeon
+namespace Aeon.World
 {
     public partial class Chunk : StaticBody3D
     {
@@ -10,7 +10,7 @@ namespace Aeon
 
         public Vector3I ChunkPosition { get; private set; }
         public readonly Vector3I Dimensions = Configuration.CHUNK_DIMENSION;
-        private ChunkManager _chunkManager;
+        private World _world;
         private ChunkMeshGenerator _chunkMeshGenerator;
         private ChunkLightManager _lightManager;
         private ChunkDecorator _chunkDecorator;
@@ -21,9 +21,9 @@ namespace Aeon
 
         public override void _Ready()
         {
-            _chunkMeshGenerator = new ChunkMeshGenerator(this, _chunkManager);
-            _lightManager = new ChunkLightManager(this, _chunkManager);
-            _chunkDecorator = new ChunkDecorator(this, _chunkManager);
+            _chunkMeshGenerator = new ChunkMeshGenerator(this, _world);
+            _lightManager = new ChunkLightManager(this, _world);
+            _chunkDecorator = new ChunkDecorator(this, _world);
 
             _meshInstance = new MeshInstance3D();
             AddChild(_meshInstance);
@@ -53,10 +53,10 @@ namespace Aeon
                 }
             }
 
-            _chunkDecorator.Decorate(terrainGenerator, worldPreset);
+            //_chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
             //_lightManager.PropagateNeighborLight();
-            _lightManager.PropagateSkyLight();
+            //_lightManager.PropagateSkyLight();
 
             _chunkData.Optimize(this);
 
@@ -126,9 +126,9 @@ namespace Aeon
             NeedsToBeRendered = true;
         }
 
-        public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
+        public void Initialize(World world, Vector3I chunkPosition)
         {
-            _chunkManager = chunkManager;
+            _world = world;
             ChunkPosition = chunkPosition;
 
             Position = new Vector3I(chunkPosition.X, chunkPosition.Y, chunkPosition.Z) * Dimensions;
