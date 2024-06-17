@@ -99,6 +99,29 @@ namespace Aeon
             if (_chunks.ContainsKey(chunkPosition))
             {
                 _chunks[chunkPosition].SetLightLevel(localPosition, lightLevel);
+            }   
+        }
+
+        public byte GetSkyLightLevel(Vector3I worldPosition)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                return _chunks[chunkPosition].GetSkyLightLevel(WorldToLocalPosition(worldPosition));
+            }
+
+            return 0;
+        }
+
+        public void SetSkyLightLevel(Vector3I worldPosition, byte lightLevel)
+        {
+            var chunkPosition = WorldToChunkPosition(worldPosition);
+            var localPosition = WorldToLocalPosition(worldPosition);
+
+            if (_chunks.ContainsKey(chunkPosition))
+            {
+                _chunks[chunkPosition].SetSkyLightLevel(localPosition, lightLevel);
             }
         }
 
@@ -308,31 +331,33 @@ namespace Aeon
 
             _chunks[chunkPosition].PlaceBlock(localPosition, BlockTypes.Instance.Get(block));
 
+            _chunks[chunkPosition].Render();
+
             if (localPosition.X < 1)
             {
-                _chunks[chunkPosition + Vector3I.Left].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Left].Render();
             }
             else if (localPosition.X > Configuration.CHUNK_DIMENSION.X - 2)
             {
-                _chunks[chunkPosition + Vector3I.Right].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Right].Render();
             }
 
             if (localPosition.Y < 1 && chunkPosition.Y > 0)
             {
-                _chunks[chunkPosition + Vector3I.Down].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Down].Render();
             }
             else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2 && chunkPosition.Y < Configuration.VERTICAL_CHUNKS - 1)
             {
-                _chunks[chunkPosition + Vector3I.Up].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Up].Render();
             }
 
             if (localPosition.Z < 1)
             {
-                _chunks[chunkPosition + Vector3I.Forward].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Forward].Render();
             }
             else if (localPosition.Z > Configuration.CHUNK_DIMENSION.Z - 2)
             {
-                _chunks[chunkPosition + Vector3I.Back].NeedsToBeRendered = true;
+                _chunks[chunkPosition + Vector3I.Back].Render();
             }
         }
     }

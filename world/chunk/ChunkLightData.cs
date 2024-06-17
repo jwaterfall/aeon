@@ -10,7 +10,7 @@ namespace Aeon
 
         public ChunkLightData(Vector3I chunkDimensions)
         {
-            _data = new byte[chunkDimensions.X * chunkDimensions.Y * chunkDimensions.Z / 2];
+            _data = new byte[chunkDimensions.X * chunkDimensions.Y * chunkDimensions.Z];
             _dimensions = chunkDimensions;
         }
 
@@ -21,34 +21,12 @@ namespace Aeon
 
         public byte Get(Vector3I localPosition)
         {
-            int index = GetIndex(localPosition);
-            int byteIndex = index / 2;
-            bool isLowerNibble = index % 2 == 0;
-
-            if (isLowerNibble)
-            {
-                return (byte)(_data[byteIndex] & 0x0F);
-            }
-            else
-            {
-                return (byte)(_data[byteIndex] >> 4 & 0x0F);
-            }
+            return _data[GetIndex(localPosition)];
         }
 
         public void Set(Vector3I localPosition, byte value)
         {
-            int index = GetIndex(localPosition);
-            int byteIndex = index / 2;
-            bool isLowerNibble = index % 2 == 0;
-
-            if (isLowerNibble)
-            {
-                _data[byteIndex] = (byte)(_data[byteIndex] & 0xF0 | value & 0x0F);
-            }
-            else
-            {
-                _data[byteIndex] = (byte)(_data[byteIndex] & 0x0F | value << 4);
-            }
+            _data[GetIndex(localPosition)] = value;
         }
     }
 }

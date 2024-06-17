@@ -8,10 +8,12 @@ namespace Aeon
     internal class ChunkLightManager
     {
         private ChunkRGBLightData _lightData = new(Configuration.CHUNK_DIMENSION);
-
         private Queue<(Vector3I, Vector3I, Vector3I)> _lightPropagationQueue = new();
         private Queue<(Vector3I, Vector3I)> _darknessPropagationQueue = new();
         private Queue<Vector3I> _lightRepairQueue = new();
+
+        private ChunkLightData _skyLightData = new(Configuration.CHUNK_DIMENSION);
+        private Queue<(Vector3I, byte)> _skyLightPropagationQueue = new();
 
         private Chunk _chunk;
         private ChunkManager _chunkManager;
@@ -84,6 +86,60 @@ namespace Aeon
             }
 
             Propagate();
+        }
+
+        public byte GetSkyLightLevel(Vector3I localPosition)
+        {
+            return _skyLightData.Get(localPosition);
+        }
+
+        public void SetSkyLightLevel(Vector3I localPosition, byte lightLevel)
+        {
+            _skyLightData.Set(localPosition, lightLevel);
+        }
+
+        public void PropagateSkyLight()
+        {
+            if (_chunk.ChunkPosition.Y != Configuration.VERTICAL_CHUNKS - 1) return;
+
+            for (var x = 0; x < Configuration.CHUNK_DIMENSION.X; x++)
+            {
+                for (var z = 0; z < Configuration.CHUNK_DIMENSION.Z; z++)
+                {
+                    var localPosition = new Vector3I(x, Configuration.CHUNK_DIMENSION.Y - 1, z);
+                    _skyLightPropagationQueue.Enqueue((localPosition, 15));
+                }
+            }
+
+            if (_skyLightPropagationQueue.Count == 0) return;
+
+            while (_skyLightPropagationQueue.Count > 0)
+            {
+                var (localPosition, lightLevel) = _skyLightPropagationQueue.Dequeue();
+                var worldPosition = _chunk.GetWorldPosition(localPosition);
+                var existingLightLevel = _chunkManager.GetSkyLightLevel(worldPosition);
+
+                if (lightLevel <= existingLightLevel) continue;
+
+                _chunkManager.SetSkyLightLevel(worldPosition, lightLevel);
+
+                foreach (var neighbor in GetNeighbors(localPosition))
+                {
+                    var neighborWorldPosition = _chunk.GetWorldPosition(neighbor);
+                    var neighborLightLevel = _chunkManager.GetSkyLightLevel(neighborWorldPosition);
+                    var neighborBlock = _chunkManager.GetBlock(neighborWorldPosition);
+                    var newLightLevel = neighbor == localPosition + Vector3I.Down ? lightLevel : (byte)(lightLevel - 1);
+
+                    if (neighborBlock == null) continue;
+
+                    if (neighborBlock.Transparent && neighborLightLevel < newLightLevel && !_skyLightPropagationQueue.Contains((neighbor, newLightLevel)))
+                    {
+                        _skyLightPropagationQueue.Enqueue((neighbor, newLightLevel));
+                    }
+                }
+            }
+
+            GD.Print("Finished propagating sky light", _skyLightPropagationQueue.Count);
         }
 
         public void AddLightSource(Vector3I localPosition, Vector3I lightLevel)

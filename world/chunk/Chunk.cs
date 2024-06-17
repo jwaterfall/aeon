@@ -53,9 +53,10 @@ namespace Aeon
                 }
             }
 
-            _lightManager.PropagateNeighborLight();
-
             _chunkDecorator.Decorate(terrainGenerator, worldPreset);
+
+            //_lightManager.PropagateNeighborLight();
+            _lightManager.PropagateSkyLight();
 
             _chunkData.Optimize(this);
 
@@ -114,6 +115,17 @@ namespace Aeon
             NeedsToBeRendered = true;
         }
 
+        public byte GetSkyLightLevel(Vector3I localPosition)
+        {
+            return _lightManager.GetSkyLightLevel(localPosition);
+        }
+
+        public void SetSkyLightLevel(Vector3I localPosition, byte lightLevel)
+        {
+            _lightManager.SetSkyLightLevel(localPosition, lightLevel);
+            NeedsToBeRendered = true;
+        }
+
         public void Initialize(ChunkManager chunkManager, Vector3I chunkPosition)
         {
             _chunkManager = chunkManager;
@@ -152,8 +164,6 @@ namespace Aeon
             {
                 _chunkData.Optimize(this);
             }
-
-            NeedsToBeRendered = true;
         }
 
         public void BreakBlock(Vector3I localPosition)
