@@ -87,14 +87,6 @@ namespace Aeon
 
         private bool IsVisible(Vector3I localPosition, Direction faceToCheck, Block sourceBlockType)
         {
-            if (
-                _chunk.ChunkPosition.Y == 0 && localPosition.Y < 0 ||
-                _chunk.ChunkPosition.Y == Configuration.VERTICAL_CHUNKS - 1 && localPosition.Y >= Configuration.CHUNK_DIMENSION.Y
-                )
-            {
-                return true;
-            }
-
             var blockType = _world.GetBlock(_chunk.GetWorldPosition(localPosition));
 
             return blockType.Occludes.Contains(faceToCheck) == false || blockType.Transparent && (blockType != sourceBlockType || !blockType.CullsSelf);

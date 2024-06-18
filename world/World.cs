@@ -236,19 +236,18 @@ namespace Aeon
         private IEnumerable<Vector3I> GetNearbyChunkPositions(Vector3I playerChunkPosition)
         {
             var radius = Configuration.CHUNK_LOAD_RADIUS;
-            var playerXZPosition = new Vector2I(playerChunkPosition.X, playerChunkPosition.Z);
 
             for (int x = -radius; x <= radius; x++)
             {
-                for (int z = -radius; z <= radius; z++)
+                for (int y = -radius; y <= radius; y++)
                 {
-                    var xzChunkPosition = new Vector2I(x + playerChunkPosition.X, z + playerChunkPosition.Z);
-
-                    if (((Vector2)playerXZPosition).DistanceTo(xzChunkPosition) <= radius)
+                    for (int z = -radius; z <= radius; z++)
                     {
-                        for (int y = 0; y < Configuration.VERTICAL_CHUNKS; y++)
+                        var chunkPosition = new Vector3I(playerChunkPosition.X + x, playerChunkPosition.Y + y, playerChunkPosition.Z + z);
+
+                        if (((Vector3)playerChunkPosition).DistanceTo(chunkPosition) <= radius)
                         {
-                            yield return new Vector3I(xzChunkPosition.X, y, xzChunkPosition.Y);
+                            yield return chunkPosition;
                         }
                     }
                 }
@@ -278,11 +277,11 @@ namespace Aeon
                 _chunks[chunkPosition + Vector3I.Right].Render();
             }
 
-            if (localPosition.Y < 1 && chunkPosition.Y > 0)
+            if (localPosition.Y < 1)
             {
                 _chunks[chunkPosition + Vector3I.Down].Render();
             }
-            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2 && chunkPosition.Y < Configuration.VERTICAL_CHUNKS - 1)
+            else if (localPosition.Y > Configuration.CHUNK_DIMENSION.Y - 2)
             {
                 _chunks[chunkPosition + Vector3I.Up].Render();
             }
