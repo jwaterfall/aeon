@@ -53,10 +53,9 @@ namespace Aeon
                 }
             }
 
-            //_chunkDecorator.Decorate(terrainGenerator, worldPreset);
+            _chunkDecorator.Decorate(terrainGenerator, worldPreset);
 
-            //_lightManager.PropagateNeighborLight();
-            //_lightManager.PropagateSkyLight();
+            _lightManager.PropagateNeighborLight();
 
             _chunkData.Optimize(this);
 
@@ -112,17 +111,6 @@ namespace Aeon
         public void SetLightLevel(Vector3I localPosition, Vector3I lightLevel)
         {
             _lightManager.SetLightLevel(localPosition, lightLevel);
-            NeedsToBeRendered = true;
-        }
-
-        public byte GetSkyLightLevel(Vector3I localPosition)
-        {
-            return _lightManager.GetSkyLightLevel(localPosition);
-        }
-
-        public void SetSkyLightLevel(Vector3I localPosition, byte lightLevel)
-        {
-            _lightManager.SetSkyLightLevel(localPosition, lightLevel);
             NeedsToBeRendered = true;
         }
 

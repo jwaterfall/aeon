@@ -112,29 +112,6 @@ namespace Aeon
             }
         }
 
-        public byte GetSkyLightLevel(Vector3I worldPosition)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                return _chunks[chunkPosition].GetSkyLightLevel(WorldToLocalPosition(worldPosition));
-            }
-
-            return 0;
-        }
-
-        public void SetSkyLightLevel(Vector3I worldPosition, byte lightLevel)
-        {
-            var chunkPosition = WorldToChunkPosition(worldPosition);
-            var localPosition = WorldToLocalPosition(worldPosition);
-
-            if (_chunks.ContainsKey(chunkPosition))
-            {
-                _chunks[chunkPosition].SetSkyLightLevel(localPosition, lightLevel);
-            }
-        }
-
         /// <summary>
         /// Method <c>WorldToChunkPosition</c> finds the chunk position containing the given world position.
         /// </summary>

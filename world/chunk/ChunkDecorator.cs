@@ -57,6 +57,8 @@ namespace Aeon
         {
             var random = new Random();
 
+            var choices = new List<string> { "red_glowstone", "blue_glowstone", "green_glowstone" };
+
             for (int x = 0; x < _chunk.Dimensions.X; x++)
             {
                 for (int z = 0; z < _chunk.Dimensions.Z; z++)
@@ -68,9 +70,9 @@ namespace Aeon
                     Vector3I blockBelowPosition = new Vector3I(x, height, z);
                     var blockBelow = _chunk.IsInChunk(blockBelowPosition) ? _chunk.GetBlock(blockBelowPosition) : _world.GetBlock(_chunk.GetWorldPosition(blockBelowPosition));
 
-                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.025f)
+                    if (blockBelow != null && (blockBelow.Name == "grass" || blockBelow.Name == "snow") && random.NextDouble() <= 0.0025f)
                     {
-                        _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height + 1, z)), BlockTypes.Instance.Get("short_grass"));
+                        _world.SetBlock(_chunk.GetWorldPosition(new Vector3I(x, height + 1, z)), BlockTypes.Instance.Get(choices[random.Next(0, choices.Count)]));
                     }
                 }
             }

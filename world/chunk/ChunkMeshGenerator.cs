@@ -186,13 +186,10 @@ namespace Aeon
             foreach (var blockPosition in sorroundingBlocks)
             {
                 var light = _world.GetBlockLightLevel(_chunk.GetWorldPosition(blockPosition));
-                var skyLight = _world.GetSkyLightLevel(_chunk.GetWorldPosition(blockPosition));
 
-                Vector3I combinedLight = new(skyLight, skyLight, skyLight);
+                if (light == Vector3.Zero) continue;
 
-                if (combinedLight == Vector3.Zero) continue;
-
-                lightLevel += combinedLight;
+                lightLevel += light;
                 count++;
             }
 
