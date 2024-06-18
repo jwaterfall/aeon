@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Aeon.World
+namespace Aeon
 {
     internal class ChunkLightManager
     {

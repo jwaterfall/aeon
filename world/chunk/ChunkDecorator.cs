@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Aeon.World
+namespace Aeon
 {
     internal class ChunkDecorator
     {

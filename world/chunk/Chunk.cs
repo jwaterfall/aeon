@@ -1,6 +1,6 @@
 using Godot;
 
-namespace Aeon.World
+namespace Aeon
 {
     public partial class Chunk : StaticBody3D
     {

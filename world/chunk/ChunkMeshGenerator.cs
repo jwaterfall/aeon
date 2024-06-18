@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Aeon.World
+namespace Aeon
 {
     public class ChunkMeshGenerator
     {

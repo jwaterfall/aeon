@@ -1,4 +1,5 @@
 using Godot;
+using System;
 
 namespace Aeon
 {
@@ -6,6 +7,7 @@ namespace Aeon
     {
         private bool _paused = false;
         private float _cameraXRotation = 0;
+        private Nullable<Vector3I> _blockLookingAt;
 
         public override void _Ready()
         {
@@ -128,6 +130,8 @@ namespace Aeon
                 var position = ray.GetCollisionPoint() - normal * 0.5f;
                 var worldPosition = (Vector3I)(position.Floor());
 
+                _blockLookingAt = worldPosition;
+
                 blockOutline.GlobalPosition = worldPosition + (Vector3.One / 2);
                 blockOutline.GlobalRotation = Vector3.Zero;
                 blockOutline.Visible = true;
@@ -149,7 +153,13 @@ namespace Aeon
             else
             {
                 blockOutline.Visible = false;
+                _blockLookingAt = null;
             }
+        }
+
+        public Nullable<Vector3I> GetBlockLookingAt()
+        {
+            return _blockLookingAt;
         }
     }
 }

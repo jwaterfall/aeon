@@ -1,7 +1,7 @@
 ﻿using Godot;
 using System;
 
-namespace Aeon.World
+namespace Aeon
 {
     class ChunkLightData
     {

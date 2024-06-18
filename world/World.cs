@@ -1,10 +1,11 @@
 using Godot;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Aeon.World
+namespace Aeon
 {
     /// <summary>
     /// Class <c>World</c> is responsible for managing the generation, decoration, rendering, and removal of chunks. It also provides methods for getting and setting blocks and light levels.
@@ -24,6 +25,13 @@ namespace Aeon.World
         private Task[] _tasks = new Task[OS.GetProcessorCount() - 2];
         private Task _renderTask;
 
+        private int _generatedChunks = 0;
+        private float _totalGenerationTime = 0;
+        private int _renderedChunks = 0;
+        private float _totalRenderTime = 0;
+
+        public float AverageGenerationTime => _totalGenerationTime / _generatedChunks;
+        public float AverageRenderTime => _totalRenderTime / _renderedChunks;
 
         /// <summary>
         /// Method <c>GetBlock</c> gets the block at the given world position.
@@ -176,6 +184,9 @@ namespace Aeon.World
                     {
                         if (!chunk.IsGenerated)
                         {
+                            var stopWatch = new Stopwatch();
+                            stopWatch.Start();
+
                             chunk.Generate(_terrainGenerator, WorldPresets.Instance.Get("default"));
 
                             if (_blocksToPlace.ContainsKey(chunkPosition))
@@ -187,6 +198,11 @@ namespace Aeon.World
 
                                 _blocksToPlace.Remove(chunkPosition, out _);
                             }
+
+                            stopWatch.Stop();
+
+                            _totalGenerationTime += stopWatch.ElapsedMilliseconds;
+                            _generatedChunks++;
                         }
                     });
                 }
@@ -202,7 +218,15 @@ namespace Aeon.World
 
                 _renderTask = Task.Run(() =>
                 {
+                    var stopWatch = new Stopwatch();
+                    stopWatch.Start();
+
                     RenderChunk(chunkPosition);
+
+                    stopWatch.Stop();
+
+                    _totalRenderTime += stopWatch.ElapsedMilliseconds;
+                    _renderedChunks++;
                 });
             }
         }
